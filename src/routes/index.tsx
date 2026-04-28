@@ -50,35 +50,27 @@ function Index() {
 
   const features: FeatureItem[] = [
     {
-      icon: BookOpen,
-      titleMn: "Шалгалт сонгох",
-      titleJa: "Choose an exam",
-      descMn: "Нээлттэй EJU шалгалтуудаас өөрт тохирохыг сонгоно.",
-      descJa: "Pick the EJU exam session that fits you best.",
-      link: "/student/exams",
-    },
-    {
       icon: FileCheck2,
-      titleMn: "Баримт бичиг илгээх",
-      titleJa: "Submit documents",
-      descMn: "Шаардлагатай файлуудаа онлайнаар байршуулах боломжтой.",
-      descJa: "Upload the required files directly in the system.",
-      link: "https://www.jasso.go.jp/en/eju/",
+      titleMn: "EJU шалгалтын тухай мэдээлэл",
+      titleJa: "EJU exam information",
+      descMn: "Шалгалтын талаарх шаардлагатай мэдээллийг харах боломжтой.",
+      descJa: "View essential information about the EJU exam.",
+      link: "/files/EJU_Bulletin_2026.pdf",
     },
     {
       icon: ShieldCheck,
-      titleMn: "Бүртгэлээ хянах",
-      titleJa: "Track your status",
-      descMn: "Илгээсэн бүртгэлийн явц, баталгаажуулалтаа хараарай.",
-      descJa: "Follow review progress and approval updates in one place.",
-      link: "/student/applications",
+      titleMn: "Бүртгэлийн зааварчилгаа",
+      titleJa: "Registration guide",
+      descMn: "Бүртгэлийн алхмууд болон явцаа хянах зааврыг үзнэ.",
+      descJa: "Review the registration steps and guidance.",
+      link: "/registration-guide",
     },
     {
-      icon: Sparkles,
+      icon: BookOpen,
       titleMn: "Мэдээ мэдээлэл",
-      titleJa: "Stay informed",
-      descMn: "Шинэчлэлт, сануулга, шалгалтын мэдээллээ алдалгүй аваарай.",
-      descJa: "Keep up with exam notices, reminders, and updates.",
+      titleJa: "News and updates",
+      descMn: "EJU-тэй холбоотой шинэ мэдээ, зарлалуудыг үзнэ.",
+      descJa: "Read the latest EJU news and announcements.",
       link: "https://www.studyinjapan.go.jp/en/",
     },
   ];
@@ -96,7 +88,6 @@ function Index() {
       const anchor = document.createElement("a");
       anchor.href = link;
       anchor.download = link.split("/").pop() ?? "download";
-      anchor.rel = "noopener";
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -160,10 +151,10 @@ function Index() {
       </section>
 
       <section className="container mx-auto px-4 py-16">
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-5 md:grid-cols-3">
           {features.map((feature) => (
             <Card
-              key={feature.link}
+              key={feature.titleMn}
               role="link"
               tabIndex={0}
               onClick={() => handleFeatureClick(feature.link)}
