@@ -14,16 +14,255 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      application_subjects: {
+        Row: {
+          application_id: string
+          subject_id: string
+        }
+        Insert: {
+          application_id: string
+          subject_id: string
+        }
+        Update: {
+          application_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_subjects_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          address: string | null
+          application_number: string
+          created_at: string
+          exam_id: string
+          id: string
+          passport_scan_path: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          phone: string | null
+          photo_path: string | null
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["application_status"]
+          target_university: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          application_number: string
+          created_at?: string
+          exam_id: string
+          id?: string
+          passport_scan_path?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          phone?: string | null
+          photo_path?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          target_university?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          application_number?: string
+          created_at?: string
+          exam_id?: string
+          id?: string
+          passport_scan_path?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          phone?: string | null
+          photo_path?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["application_status"]
+          target_university?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          available_seats: number
+          created_at: string
+          description: string | null
+          exam_date: string
+          id: string
+          is_active: boolean
+          location: string
+          name: string
+          registration_end: string
+          registration_start: string
+          session: Database["public"]["Enums"]["exam_session"]
+          total_seats: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          available_seats: number
+          created_at?: string
+          description?: string | null
+          exam_date: string
+          id?: string
+          is_active?: boolean
+          location: string
+          name: string
+          registration_end: string
+          registration_start: string
+          session: Database["public"]["Enums"]["exam_session"]
+          total_seats: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          available_seats?: number
+          created_at?: string
+          description?: string | null
+          exam_date?: string
+          id?: string
+          is_active?: boolean
+          location?: string
+          name?: string
+          registration_end?: string
+          registration_start?: string
+          session?: Database["public"]["Enums"]["exam_session"]
+          total_seats?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
+          passport_number: string
+          phone: string | null
+          profile_photo_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email: string
+          first_name: string
+          id: string
+          is_active?: boolean
+          last_name: string
+          passport_number: string
+          phone?: string | null
+          profile_photo_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          last_name?: string
+          passport_number?: string
+          phone?: string | null
+          profile_photo_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subjects: {
+        Row: {
+          category: Database["public"]["Enums"]["subject_category"]
+          code: string
+          created_at: string
+          id: string
+          name_ja: string
+          name_mn: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["subject_category"]
+          code: string
+          created_at?: string
+          id?: string
+          name_ja: string
+          name_mn: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["subject_category"]
+          code?: string
+          created_at?: string
+          id?: string
+          name_ja?: string
+          name_mn?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "student" | "admin"
+      application_status: "pending" | "approved" | "rejected"
+      exam_session: "first" | "second"
+      payment_status: "unpaid" | "paid"
+      subject_category: "japanese" | "math" | "science" | "general"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +389,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["student", "admin"],
+      application_status: ["pending", "approved", "rejected"],
+      exam_session: ["first", "second"],
+      payment_status: ["unpaid", "paid"],
+      subject_category: ["japanese", "math", "science", "general"],
+    },
   },
 } as const
