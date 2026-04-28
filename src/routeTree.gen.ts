@@ -25,6 +25,9 @@ import { Route as AdminStatsRouteImport } from './routes/admin.stats'
 import { Route as AdminExamsRouteImport } from './routes/admin.exams'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
+import { Route as StudentExamsExamIdRouteImport } from './routes/student.exams.$examId'
+import { Route as StudentApplicationsIdRouteImport } from './routes/student.applications.$id'
+import { Route as StudentExamsExamIdApplyRouteImport } from './routes/student.exams.$examId.apply'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -106,6 +109,21 @@ const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
   path: '/applications',
   getParentRoute: () => AdminRoute,
 } as any)
+const StudentExamsExamIdRoute = StudentExamsExamIdRouteImport.update({
+  id: '/$examId',
+  path: '/$examId',
+  getParentRoute: () => StudentExamsRoute,
+} as any)
+const StudentApplicationsIdRoute = StudentApplicationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => StudentApplicationsRoute,
+} as any)
+const StudentExamsExamIdApplyRoute = StudentExamsExamIdApplyRouteImport.update({
+  id: '/apply',
+  path: '/apply',
+  getParentRoute: () => StudentExamsExamIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -120,10 +138,13 @@ export interface FileRoutesByFullPath {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/student/applications': typeof StudentApplicationsRoute
+  '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRoute
+  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
+  '/student/applications/$id': typeof StudentApplicationsIdRoute
+  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
+  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -138,10 +159,13 @@ export interface FileRoutesByTo {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/student/applications': typeof StudentApplicationsRoute
+  '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRoute
+  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
+  '/student/applications/$id': typeof StudentApplicationsIdRoute
+  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
+  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,10 +181,13 @@ export interface FileRoutesById {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/student/applications': typeof StudentApplicationsRoute
+  '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRoute
+  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
+  '/student/applications/$id': typeof StudentApplicationsIdRoute
+  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
+  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +208,9 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/applications/$id'
+    | '/student/exams/$examId'
+    | '/student/exams/$examId/apply'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +229,9 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/applications/$id'
+    | '/student/exams/$examId'
+    | '/student/exams/$examId/apply'
   id:
     | '__root__'
     | '/'
@@ -217,6 +250,9 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/applications/$id'
+    | '/student/exams/$examId'
+    | '/student/exams/$examId/apply'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -343,6 +379,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminApplicationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/student/exams/$examId': {
+      id: '/student/exams/$examId'
+      path: '/$examId'
+      fullPath: '/student/exams/$examId'
+      preLoaderRoute: typeof StudentExamsExamIdRouteImport
+      parentRoute: typeof StudentExamsRoute
+    }
+    '/student/applications/$id': {
+      id: '/student/applications/$id'
+      path: '/$id'
+      fullPath: '/student/applications/$id'
+      preLoaderRoute: typeof StudentApplicationsIdRouteImport
+      parentRoute: typeof StudentApplicationsRoute
+    }
+    '/student/exams/$examId/apply': {
+      id: '/student/exams/$examId/apply'
+      path: '/apply'
+      fullPath: '/student/exams/$examId/apply'
+      preLoaderRoute: typeof StudentExamsExamIdApplyRouteImport
+      parentRoute: typeof StudentExamsExamIdRoute
+    }
   }
 }
 
@@ -364,17 +421,51 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface StudentApplicationsRouteChildren {
+  StudentApplicationsIdRoute: typeof StudentApplicationsIdRoute
+}
+
+const StudentApplicationsRouteChildren: StudentApplicationsRouteChildren = {
+  StudentApplicationsIdRoute: StudentApplicationsIdRoute,
+}
+
+const StudentApplicationsRouteWithChildren =
+  StudentApplicationsRoute._addFileChildren(StudentApplicationsRouteChildren)
+
+interface StudentExamsExamIdRouteChildren {
+  StudentExamsExamIdApplyRoute: typeof StudentExamsExamIdApplyRoute
+}
+
+const StudentExamsExamIdRouteChildren: StudentExamsExamIdRouteChildren = {
+  StudentExamsExamIdApplyRoute: StudentExamsExamIdApplyRoute,
+}
+
+const StudentExamsExamIdRouteWithChildren =
+  StudentExamsExamIdRoute._addFileChildren(StudentExamsExamIdRouteChildren)
+
+interface StudentExamsRouteChildren {
+  StudentExamsExamIdRoute: typeof StudentExamsExamIdRouteWithChildren
+}
+
+const StudentExamsRouteChildren: StudentExamsRouteChildren = {
+  StudentExamsExamIdRoute: StudentExamsExamIdRouteWithChildren,
+}
+
+const StudentExamsRouteWithChildren = StudentExamsRoute._addFileChildren(
+  StudentExamsRouteChildren,
+)
+
 interface StudentRouteChildren {
-  StudentApplicationsRoute: typeof StudentApplicationsRoute
+  StudentApplicationsRoute: typeof StudentApplicationsRouteWithChildren
   StudentDashboardRoute: typeof StudentDashboardRoute
-  StudentExamsRoute: typeof StudentExamsRoute
+  StudentExamsRoute: typeof StudentExamsRouteWithChildren
   StudentProfileRoute: typeof StudentProfileRoute
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
-  StudentApplicationsRoute: StudentApplicationsRoute,
+  StudentApplicationsRoute: StudentApplicationsRouteWithChildren,
   StudentDashboardRoute: StudentDashboardRoute,
-  StudentExamsRoute: StudentExamsRoute,
+  StudentExamsRoute: StudentExamsRouteWithChildren,
   StudentProfileRoute: StudentProfileRoute,
 }
 
