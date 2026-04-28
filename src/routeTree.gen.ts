@@ -9,38 +9,270 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StudentRouteImport } from './routes/student'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentExamsRouteImport } from './routes/student.exams'
+import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
+import { Route as StudentApplicationsRouteImport } from './routes/student.applications'
+import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminStatsRouteImport } from './routes/admin.stats'
+import { Route as AdminExamsRouteImport } from './routes/admin.exams'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
 
+const StudentRoute = StudentRouteImport.update({
+  id: '/student',
+  path: '/student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentProfileRoute = StudentProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentExamsRoute = StudentExamsRouteImport.update({
+  id: '/exams',
+  path: '/exams',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentDashboardRoute = StudentDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentApplicationsRoute = StudentApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => StudentRoute,
+} as any)
+const AdminStudentsRoute = AdminStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminStatsRoute = AdminStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminExamsRoute = AdminExamsRouteImport.update({
+  id: '/exams',
+  path: '/exams',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/student': typeof StudentRouteWithChildren
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/exams': typeof AdminExamsRoute
+  '/admin/stats': typeof AdminStatsRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/student/applications': typeof StudentApplicationsRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
+  '/student/profile': typeof StudentProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/student': typeof StudentRouteWithChildren
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/exams': typeof AdminExamsRoute
+  '/admin/stats': typeof AdminStatsRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/student/applications': typeof StudentApplicationsRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
+  '/student/profile': typeof StudentProfileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/student': typeof StudentRouteWithChildren
+  '/admin/applications': typeof AdminApplicationsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/exams': typeof AdminExamsRoute
+  '/admin/stats': typeof AdminStatsRoute
+  '/admin/students': typeof AdminStudentsRoute
+  '/student/applications': typeof StudentApplicationsRoute
+  '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
+  '/student/profile': typeof StudentProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/student'
+    | '/admin/applications'
+    | '/admin/dashboard'
+    | '/admin/exams'
+    | '/admin/stats'
+    | '/admin/students'
+    | '/student/applications'
+    | '/student/dashboard'
+    | '/student/exams'
+    | '/student/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/student'
+    | '/admin/applications'
+    | '/admin/dashboard'
+    | '/admin/exams'
+    | '/admin/stats'
+    | '/admin/students'
+    | '/student/applications'
+    | '/student/dashboard'
+    | '/student/exams'
+    | '/student/profile'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/student'
+    | '/admin/applications'
+    | '/admin/dashboard'
+    | '/admin/exams'
+    | '/admin/stats'
+    | '/admin/students'
+    | '/student/applications'
+    | '/student/dashboard'
+    | '/student/exams'
+    | '/student/profile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  StudentRoute: typeof StudentRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/student': {
+      id: '/student'
+      path: '/student'
+      fullPath: '/student'
+      preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +280,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/profile': {
+      id: '/student/profile'
+      path: '/profile'
+      fullPath: '/student/profile'
+      preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/exams': {
+      id: '/student/exams'
+      path: '/exams'
+      fullPath: '/student/exams'
+      preLoaderRoute: typeof StudentExamsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/dashboard': {
+      id: '/student/dashboard'
+      path: '/dashboard'
+      fullPath: '/student/dashboard'
+      preLoaderRoute: typeof StudentDashboardRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/applications': {
+      id: '/student/applications'
+      path: '/applications'
+      fullPath: '/student/applications'
+      preLoaderRoute: typeof StudentApplicationsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/admin/students': {
+      id: '/admin/students'
+      path: '/students'
+      fullPath: '/admin/students'
+      preLoaderRoute: typeof AdminStudentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/stats': {
+      id: '/admin/stats'
+      path: '/stats'
+      fullPath: '/admin/stats'
+      preLoaderRoute: typeof AdminStatsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/exams': {
+      id: '/admin/exams'
+      path: '/exams'
+      fullPath: '/admin/exams'
+      preLoaderRoute: typeof AdminExamsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/applications': {
+      id: '/admin/applications'
+      path: '/applications'
+      fullPath: '/admin/applications'
+      preLoaderRoute: typeof AdminApplicationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminApplicationsRoute: typeof AdminApplicationsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminExamsRoute: typeof AdminExamsRoute
+  AdminStatsRoute: typeof AdminStatsRoute
+  AdminStudentsRoute: typeof AdminStudentsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminApplicationsRoute: AdminApplicationsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminExamsRoute: AdminExamsRoute,
+  AdminStatsRoute: AdminStatsRoute,
+  AdminStudentsRoute: AdminStudentsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface StudentRouteChildren {
+  StudentApplicationsRoute: typeof StudentApplicationsRoute
+  StudentDashboardRoute: typeof StudentDashboardRoute
+  StudentExamsRoute: typeof StudentExamsRoute
+  StudentProfileRoute: typeof StudentProfileRoute
+}
+
+const StudentRouteChildren: StudentRouteChildren = {
+  StudentApplicationsRoute: StudentApplicationsRoute,
+  StudentDashboardRoute: StudentDashboardRoute,
+  StudentExamsRoute: StudentExamsRoute,
+  StudentProfileRoute: StudentProfileRoute,
+}
+
+const StudentRouteWithChildren =
+  StudentRoute._addFileChildren(StudentRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  StudentRoute: StudentRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
