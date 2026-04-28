@@ -34,7 +34,6 @@ interface GuideUpdate {
 }
 
 const bulletinPath = "/files/EJU_Bulletin_2026.pdf";
-const referenceImagePath = "/images/registration-guide-reference.png";
 
 export const Route = createFileRoute("/registration-guide")({
   head: () => ({
@@ -43,7 +42,7 @@ export const Route = createFileRoute("/registration-guide")({
       {
         name: "description",
         content:
-          "EJU бүртгэлийн алхам, хугацаа, шалгалтын товхимол, шаардлагатай мэдээллийг нэг дороос харах хуудас.",
+          "EJU бүртгэлийн алхам, хугацаа, шалгалтын тов, шаардлагатай мэдээллийг нэг дороос харах хуудас.",
       },
     ],
   }),
@@ -63,16 +62,16 @@ function RegistrationGuidePage() {
       en: "The exam covers Japanese language ability together with math, science, and other academic foundations.",
     },
     {
-      mn: "Эндээс та бүртгэлийн алхам, товхимол, хугацаа, шинэ мэдээ мэдээллээ нэг дороос авна.",
+      mn: "Эндээс та бүртгэлийн алхам, хугацаа, шинэ мэдээ мэдээллээ нэг дороос авна.",
       en: "This page brings together the registration steps, bulletin, dates, and updates in one place.",
     },
   ];
 
   const steps: GuideStep[] = [
     {
-      titleMn: "1. Товхимолтой танилцах",
+      titleMn: "1. Товч танилцах",
       titleEn: "1. Review the bulletin",
-      bodyMn: "Шалгалтын товхимлыг нээж шалгалтын бүтэц, шаардлагатай материал, хугацааг нягтална.",
+      bodyMn: "Шалгалтыг нээж шалгалтын бүтэц, шаардлагатай материал, хугацааг нягтална.",
       bodyEn: "Open the exam bulletin and confirm the structure, required materials, and schedule.",
     },
     {
@@ -95,13 +94,6 @@ function RegistrationGuidePage() {
 
   const updates: GuideUpdate[] = [
     {
-      titleMn: "2026 оны EJU товхимол татах",
-      titleEn: "Download the 2026 EJU bulletin",
-      date: "2026-04-28",
-      href: bulletinPath,
-      download: true,
-    },
-    {
       titleMn: "2026-06-21 шалгалтын бүртгэлийн хугацаа: 2026-02-16 - 2026-03-12",
       titleEn: "Registration period for the June 21, 2026 exam: 2026-02-16 to 2026-03-12",
       date: "2026-03-12",
@@ -109,7 +101,7 @@ function RegistrationGuidePage() {
       download: true,
     },
     {
-      titleMn: "2026-11-08 шалгалтын огноог товхимлоос шалгах",
+      titleMn: "2026-11-08 шалгалтын огноог шалгах",
       titleEn: "Check the November 8, 2026 exam details in the bulletin",
       date: "2026-02-16",
       href: bulletinPath,
@@ -123,6 +115,37 @@ function RegistrationGuidePage() {
     },
   ];
 
+  const dateItems = [
+    {
+      labelMn: "Бүртгэлийн хугацаа",
+      labelEn: "Registration window",
+      value: "2026-02-16 — 2026-03-12",
+    },
+    {
+      labelMn: "1-р шалгалтын өдөр",
+      labelEn: "First exam date",
+      value: "2026-06-21",
+    },
+    {
+      labelMn: "2-р шалгалтын өдөр",
+      labelEn: "Second exam date",
+      value: "2026-11-08",
+    },
+  ];
+
+  const statItems = [
+    {
+      num: "2",
+      labelMn: "шалгалтын цикл",
+      labelEn: "exam cycles",
+    },
+    {
+      num: "24",
+      labelMn: "бүртгэлийн хоног",
+      labelEn: "days to register",
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-subtle">
       <SiteHeader />
@@ -130,6 +153,7 @@ function RegistrationGuidePage() {
       <main className="flex-1">
         <section className="container mx-auto px-4 py-10 md:py-14">
           <div className="max-w-6xl mx-auto">
+            {/* Page header */}
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="secondary" className="bg-accent/60 text-accent-foreground">
                 {lang === "mn" ? "Бүртгэлийн заавар" : "Registration Guide"}
@@ -144,13 +168,7 @@ function RegistrationGuidePage() {
                 <h1 className="text-4xl md:text-5xl font-bold text-foreground">
                   {lang === "mn" ? "EJU бүртгэлийн зааварчилгаа" : "EJU registration guide"}
                 </h1>
-                <p className="mt-4 text-base md:text-lg text-muted-foreground">
-                  {lang === "mn"
-                    ? "Товхимол, бүртгэлийн алхам, хугацаа, шинэ мэдээ мэдээллийг screenshot дээрх бүтэцтэй төстэй боловч илүү цэгцтэй, системтэй харагдахаар энд нэгтгэлээ."
-                    : "The bulletin, registration steps, dates, and updates are collected here in a cleaner version of the layout shown in your reference screenshot."}
-                </p>
               </div>
-
               <Button asChild variant="outline">
                 <Link to="/">
                   <ArrowLeft className="mr-2 h-4 w-4" />
@@ -159,8 +177,13 @@ function RegistrationGuidePage() {
               </Button>
             </div>
 
+            {/* Main grid */}
             <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_360px]">
+
+              {/* ── Left column ── */}
               <div className="space-y-8">
+
+                {/* About card */}
                 <div className="rounded-xl border border-border bg-card px-6 py-7 shadow-card">
                   <div className="flex items-center gap-2 text-primary">
                     <Info className="h-4 w-4" />
@@ -178,30 +201,37 @@ function RegistrationGuidePage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {[
-                      lang === "mn"
-                        ? "Япон дахь их, дээд сургуульд элсэх шалгуурын нэг хэсэг"
-                        : "A key requirement for university admission in Japan",
-                      lang === "mn"
-                        ? "Олон улсын оюутнуудад зориулсан шалгалт"
-                        : "Designed for international students",
-                      lang === "mn"
-                        ? "Шалгалтын материал, огноо, зааврыг товхимлоос шалгана"
-                        : "Schedules and instructions are confirmed in the bulletin",
-                      lang === "mn"
-                        ? "Энэ системээр дамжуулан бүртгэлээ хянана"
-                        : "Track your registration through this system",
+                      {
+                        mn: "Япон дахь их, дээд сургуульд элсэх шалгуурын нэг хэсэг",
+                        en: "A key requirement for university admission in Japan",
+                      },
+                      {
+                        mn: "Олон улсын оюутнуудад зориулсан шалгалт",
+                        en: "Designed for international students",
+                      },
+                      {
+                        mn: "Шалгалтын материал, огноо, зааврыг товхимлоос шалгана",
+                        en: "Schedules and instructions are confirmed in the bulletin",
+                      },
+                      {
+                        mn: "Энэ системээр дамжуулан бүртгэлээ хянана",
+                        en: "Track your registration through this system",
+                      },
                     ].map((point) => (
                       <div
-                        key={point}
+                        key={point.en}
                         className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/30 px-4 py-3"
                       >
                         <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                        <p className="text-sm text-foreground">{point}</p>
+                        <p className="text-sm text-foreground">
+                          {lang === "mn" ? point.mn : point.en}
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
+                {/* Steps */}
                 <div>
                   <div className="mb-4 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
@@ -226,6 +256,7 @@ function RegistrationGuidePage() {
                   </div>
                 </div>
 
+                {/* Updates */}
                 <div className="rounded-xl border border-border bg-card shadow-card">
                   <div className="flex items-center gap-2 px-6 py-5">
                     <Newspaper className="h-4 w-4 text-primary" />
@@ -235,9 +266,8 @@ function RegistrationGuidePage() {
                   </div>
                   <Separator />
                   <div className="px-4 py-2">
-                    {updates.map((update, index) => {
+                    {updates.map((update) => {
                       const external = /^https?:\/\//i.test(update.href);
-
                       return (
                         <a
                           key={`${update.titleEn}-${update.date}`}
@@ -265,9 +295,6 @@ function RegistrationGuidePage() {
                           ) : (
                             <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
                           )}
-                          {index < updates.length - 1 && (
-                            <Separator className="absolute left-0 right-0 bottom-0 hidden" />
-                          )}
                         </a>
                       );
                     })}
@@ -275,27 +302,22 @@ function RegistrationGuidePage() {
                 </div>
               </div>
 
+              {/* ── Right sidebar ── */}
               <aside className="space-y-5 lg:sticky lg:top-24 self-start">
-                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-elegant">
-                  <img
-                    src={referenceImagePath}
-                    alt="Registration guide preview"
-                    className="h-auto w-full object-cover"
-                  />
-                </div>
 
+                {/* Bulletin download card */}
                 <div className="rounded-xl border border-border bg-card px-5 py-5 shadow-card">
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {lang === "mn" ? "Товхимол" : "Bulletin"}
+                    {lang === "mn" ? "Товч мэдээлэл" : "Bulletin"}
                   </Badge>
                   <h3 className="mt-4 text-2xl font-semibold leading-tight">
                     {lang === "mn"
-                      ? "2026 оны EJU бүртгэлийн товхимол"
+                      ? "2026 оны EJU бүртгэлийн мэдээлэл"
                       : "2026 EJU registration bulletin"}
                   </h3>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
                     {lang === "mn"
-                      ? "Шалгалтын хуваарь, бүртгэлийн хугацаа, материалын шаардлага, анхаарах зүйлсийг PDF хувилбараар татаж үзээрэй."
+                      ? "Шалгалтын хуваарь, бүртгэлийн хугацаа, материалын шаардлага, анхаарах зүйлсийг PDF хувилбараар дэлгэрэнгүй татаж үзээрэй."
                       : "Download the official PDF to review the exam schedule, registration window, and document requirements."}
                   </p>
                   <div className="mt-5 grid gap-3">
@@ -314,32 +336,41 @@ function RegistrationGuidePage() {
                   </div>
                 </div>
 
+                {/* Dates card */}
                 <div className="rounded-xl border border-border bg-card px-5 py-5 shadow-card">
-                  <div className="flex items-center gap-2 text-primary">
+                  <div className="flex items-center gap-2 text-primary mb-4">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-semibold">
                       {lang === "mn" ? "Хугацааны сануулга" : "Important dates"}
                     </span>
                   </div>
-                  <div className="mt-4 space-y-4 text-sm">
-                    <div className="rounded-lg bg-muted/40 px-4 py-3">
-                      <div className="font-medium text-foreground">
-                        {lang === "mn" ? "1-р шалгалтын бүртгэл" : "First exam registration"}
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {statItems.map(({ num, labelMn, labelEn }) => (
+                      <div
+                        key={labelEn}
+                        className="rounded-lg bg-muted/40 p-3 text-center"
+                      >
+                        <div className="text-2xl font-semibold text-primary">{num}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {lang === "mn" ? labelMn : labelEn}
+                        </div>
                       </div>
-                      <div className="mt-1 text-muted-foreground">2026-02-16 to 2026-03-12</div>
-                    </div>
-                    <div className="rounded-lg bg-muted/40 px-4 py-3">
-                      <div className="font-medium text-foreground">
-                        {lang === "mn" ? "1-р шалгалтын өдөр" : "First exam date"}
+                    ))}
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  <div className="space-y-2 text-sm">
+                    {dateItems.map(({ labelMn, labelEn, value }) => (
+                      <div key={labelEn} className="rounded-lg bg-muted/40 px-4 py-3">
+                        <div className="font-medium text-foreground">
+                          {lang === "mn" ? labelMn : labelEn}
+                        </div>
+                        <div className="mt-1 text-muted-foreground">{value}</div>
                       </div>
-                      <div className="mt-1 text-muted-foreground">2026-06-21</div>
-                    </div>
-                    <div className="rounded-lg bg-muted/40 px-4 py-3">
-                      <div className="font-medium text-foreground">
-                        {lang === "mn" ? "2-р шалгалтын өдөр" : "Second exam date"}
-                      </div>
-                      <div className="mt-1 text-muted-foreground">2026-11-08</div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </aside>

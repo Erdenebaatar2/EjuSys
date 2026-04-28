@@ -61,7 +61,7 @@ function Index() {
       icon: ShieldCheck,
       titleMn: "Бүртгэлийн зааварчилгаа",
       titleJa: "Registration guide",
-      descMn: "Бүртгэлийн алхмууд болон явцаа хянах зааврыг үзнэ.",
+      descMn: "Бүртгэлийн алхмууд болон явцыг хянах зааврыг үзнэ.",
       descJa: "Review the registration steps and guidance.",
       link: "/registration-guide",
     },
