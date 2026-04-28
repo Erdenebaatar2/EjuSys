@@ -8,26 +8,36 @@ import { useLang } from "@/contexts/LangContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { toast } from "sonner";
 
-const schema = z.object({
-  first_name: z.string().min(1, "Заавал"),
-  last_name: z.string().min(1, "Заавал"),
-  passport_number: z.string().min(3, "Паспорт дугаар богино байна"),
-  phone: z.string().optional(),
-  email: z.string().email("Имэйл буруу"),
-  password: z.string()
-    .min(8, "Хамгийн багадаа 8 тэмдэгт")
-    .regex(/[A-Z]/, "1 том үсэг шаардлагатай")
-    .regex(/[0-9]/, "1 тоо шаардлагатай"),
-  confirm: z.string(),
-}).refine((d) => d.password === d.confirm, {
-  message: "Нууц үг тохирохгүй байна",
-  path: ["confirm"],
-});
+const schema = z
+  .object({
+    first_name: z.string().min(1, "Заавал"),
+    last_name: z.string().min(1, "Заавал"),
+    passport_number: z.string().min(3, "Паспорт дугаар богино байна"),
+    phone: z.string().optional(),
+    email: z.string().email("Имэйл буруу"),
+    password: z
+      .string()
+      .min(8, "Хамгийн багадаа 8 тэмдэгт")
+      .regex(/[A-Z]/, "1 том үсэг шаардлагатай")
+      .regex(/[0-9]/, "1 тоо шаардлагатай"),
+    confirm: z.string(),
+  })
+  .refine((d) => d.password === d.confirm, {
+    message: "Нууц үг тохирохгүй байна",
+    path: ["confirm"],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -35,7 +45,11 @@ export function RegisterForm() {
   const { t, lang } = useLang();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -57,11 +71,13 @@ export function RegisterForm() {
     });
     setSubmitting(false);
     if (error) {
-      toast.error(lang === "mn" ? "Бүртгүүлэх амжилтгүй" : "登録失敗", { description: error.message });
+      toast.error(lang === "mn" ? "Бүртгүүлэх амжилтгүй" : "Registration failed", {
+        description: error.message,
+      });
       return;
     }
-    toast.success(lang === "mn" ? "Бүртгэл амжилттай!" : "登録完了！", {
-      description: lang === "mn" ? "Имэйлээ шалгана уу" : "メールをご確認ください",
+    toast.success(lang === "mn" ? "Бүртгэл амжилттай!" : "Registration successful!", {
+      description: lang === "mn" ? "Имэйлээ шалгана уу" : "Please check your email.",
     });
     void navigate({ to: "/login" });
   }
@@ -82,7 +98,7 @@ export function RegisterForm() {
           <CardHeader>
             <CardTitle className="text-2xl">{t("register")}</CardTitle>
             <CardDescription className="text-bilingual-ja">
-              {lang === "mn" ? "Шинэ оюутны бүртгэл" : "新規学生アカウント作成"}
+              {lang === "mn" ? "Шинэ оюутны бүртгэл" : "Create a new student account"}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -91,18 +107,24 @@ export function RegisterForm() {
                 <div className="space-y-1.5">
                   <Label htmlFor="last_name">{t("lastName")}</Label>
                   <Input id="last_name" {...register("last_name")} />
-                  {errors.last_name && <p className="text-xs text-destructive">{errors.last_name.message}</p>}
+                  {errors.last_name && (
+                    <p className="text-xs text-destructive">{errors.last_name.message}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="first_name">{t("firstName")}</Label>
                   <Input id="first_name" {...register("first_name")} />
-                  {errors.first_name && <p className="text-xs text-destructive">{errors.first_name.message}</p>}
+                  {errors.first_name && (
+                    <p className="text-xs text-destructive">{errors.first_name.message}</p>
+                  )}
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="passport_number">{t("passportNumber")}</Label>
                 <Input id="passport_number" {...register("passport_number")} />
-                {errors.passport_number && <p className="text-xs text-destructive">{errors.passport_number.message}</p>}
+                {errors.passport_number && (
+                  <p className="text-xs text-destructive">{errors.passport_number.message}</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">{t("phone")}</Label>
@@ -116,13 +138,27 @@ export function RegisterForm() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="password">{t("password")}</Label>
-                  <Input id="password" type="password" autoComplete="new-password" {...register("password")} />
-                  {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="new-password"
+                    {...register("password")}
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-destructive">{errors.password.message}</p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="confirm">{t("confirmPassword")}</Label>
-                  <Input id="confirm" type="password" autoComplete="new-password" {...register("confirm")} />
-                  {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
+                  <Input
+                    id="confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    {...register("confirm")}
+                  />
+                  {errors.confirm && (
+                    <p className="text-xs text-destructive">{errors.confirm.message}</p>
+                  )}
                 </div>
               </div>
             </CardContent>

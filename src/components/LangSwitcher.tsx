@@ -17,11 +17,11 @@ export function LangSwitcher() {
       <Button
         type="button"
         size="sm"
-        variant={lang === "ja" ? "default" : "ghost"}
+        variant={lang === "en" ? "default" : "ghost"}
         className="h-7 px-2.5 text-xs"
-        onClick={() => setLang("ja")}
+        onClick={() => setLang("en")}
       >
-        日本
+        ENG
       </Button>
     </div>
   );

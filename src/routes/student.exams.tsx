@@ -47,22 +47,32 @@ function StudentExams() {
   }, []);
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
     <div className="max-w-6xl">
       <div>
-        <h1 className="text-3xl font-bold">{lang === "mn" ? "Нээлттэй шалгалтууд" : "受付中の試験"}</h1>
+        <h1 className="text-3xl font-bold">
+          {lang === "mn" ? "Нээлттэй шалгалтууд" : "Open exams"}
+        </h1>
         <p className="mt-1 text-muted-foreground text-bilingual-ja">
-          {lang === "mn" ? "Бүртгүүлэх боломжтой EJU шалгалтуудын жагсаалт" : "出願可能なEJU試験一覧"}
+          {lang === "mn"
+            ? "Бүртгүүлэх боломжтой EJU шалгалтуудын жагсаалт"
+            : "Browse the EJU exams that are currently open for application"}
         </p>
       </div>
 
       {exams.length === 0 ? (
         <Card className="mt-6 shadow-card">
           <CardContent className="py-12 text-center text-muted-foreground">
-            {lang === "mn" ? "Одоогоор нээлттэй шалгалт байхгүй байна" : "現在受付中の試験はありません"}
+            {lang === "mn"
+              ? "Одоогоор нээлттэй шалгалт байхгүй байна"
+              : "There are no open exams at the moment."}
           </CardContent>
         </Card>
       ) : (
@@ -83,8 +93,12 @@ function StudentExams() {
                     </div>
                     <Badge variant={open ? "default" : "secondary"} className="shrink-0">
                       {open
-                        ? (lang === "mn" ? "Нээлттэй" : "受付中")
-                        : (lang === "mn" ? "Хаалттай" : "受付終了")}
+                        ? lang === "mn"
+                          ? "Нээлттэй"
+                          : "Open"
+                        : lang === "mn"
+                          ? "Хаалттай"
+                          : "Closed"}
                     </Badge>
                   </div>
 
@@ -102,23 +116,28 @@ function StudentExams() {
                       <span>
                         {lang === "mn"
                           ? `${seatsLeft} / ${e.total_seats} суудал үлдсэн`
-                          : `残り ${seatsLeft} / ${e.total_seats} 席`}
+                          : `${seatsLeft} / ${e.total_seats} seats remaining`}
                       </span>
                     </div>
                   </div>
 
                   <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${fillPct}%` }} />
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${fillPct}%` }}
+                    />
                   </div>
 
                   <div className="text-xs text-muted-foreground">
-                    {lang === "mn" ? "Бүртгэл дуусах:" : "受付終了日:"}{" "}
-                    <span className="font-medium text-foreground">{formatDate(e.registration_end, lang)}</span>
+                    {lang === "mn" ? "Бүртгэл дуусах:" : "Application closes:"}{" "}
+                    <span className="font-medium text-foreground">
+                      {formatDate(e.registration_end, lang)}
+                    </span>
                   </div>
 
                   <Button asChild className="w-full" disabled={!open}>
                     <Link to="/student/exams/$examId" params={{ examId: e.id }}>
-                      {lang === "mn" ? "Дэлгэрэнгүй" : "詳細を見る"}
+                      {lang === "mn" ? "Дэлгэрэнгүй" : "View details"}
                       <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>

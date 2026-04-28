@@ -1,12 +1,11 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type ReactNode, useState } from "react";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Loader2, LogOut, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
 
 interface NavItem {
   to: string;
@@ -54,7 +53,13 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
         <div className="leading-tight">
           <div className="text-sm font-semibold">EJU</div>
           <div className="text-[10px] text-muted-foreground">
-            {requireRole === "admin" ? (lang === "mn" ? "Админ" : "管理者") : (lang === "mn" ? "Оюутан" : "学生")}
+            {requireRole === "admin"
+              ? lang === "mn"
+                ? "Админ"
+                : "Admin"
+              : lang === "mn"
+                ? "Оюутан"
+                : "Student"}
           </div>
         </div>
       </div>
@@ -80,9 +85,14 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
       </nav>
       <div className="border-t border-sidebar-border p-3 space-y-2">
         <div className="px-2 text-xs text-muted-foreground truncate">{user.email}</div>
-        <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => void signOut()}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start"
+          onClick={() => void signOut()}
+        >
           <LogOut className="mr-2 h-4 w-4" />
-          {lang === "mn" ? "Гарах" : "ログアウト"}
+          {lang === "mn" ? "Гарах" : "Log out"}
         </Button>
       </div>
     </>
@@ -90,17 +100,17 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
         <SidebarContent />
       </aside>
 
-      {/* Mobile + main */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 backdrop-blur px-4 h-14">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0 flex flex-col bg-sidebar">
               <SidebarContent />

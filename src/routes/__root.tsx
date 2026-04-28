@@ -10,10 +10,10 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Хуудас олдсонгүй / ページが見つかりません</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Таны хайсан хуудас байхгүй байна.
-        </p>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Хуудас олдсонгүй / Page not found
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">Таны хайсан хуудас байхгүй байна.</p>
         <div className="mt-6">
           <Link
             to="/"
@@ -32,8 +32,12 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "EJU Бүртгэлийн Систем | EJU 出願システム" },
-      { name: "description", content: "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем." },
+      { title: "EJU Бүртгэлийн Систем | EJU Registration System" },
+      {
+        name: "description",
+        content:
+          "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем.",
+      },
       { property: "og:title", content: "EJU Бүртгэлийн Систем" },
       { property: "og:description", content: "Япон Их Сургуулийн шалгалтад онлайнаар бүртгүүл." },
       { property: "og:type", content: "website" },

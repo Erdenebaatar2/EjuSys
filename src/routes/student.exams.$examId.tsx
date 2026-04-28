@@ -14,14 +14,34 @@ export const Route = createFileRoute("/student/exams/$examId")({
   component: ExamDetail,
 });
 
+interface ExamDetailRecord {
+  id: string;
+  name: string;
+  exam_date: string;
+  location: string;
+  registration_start: string;
+  registration_end: string;
+  available_seats: number;
+  total_seats: number;
+  session: "first" | "second";
+  year: number;
+  description?: string | null;
+}
+
+interface ExistingApplication {
+  id: string;
+  application_number: string;
+  status: string;
+}
+
 function ExamDetail() {
   const { examId } = Route.useParams();
   const { user } = useAuth();
   const { lang } = useLang();
   const navigate = useNavigate();
 
-  const [exam, setExam] = useState<any>(null);
-  const [existingApp, setExistingApp] = useState<any>(null);
+  const [exam, setExam] = useState<ExamDetailRecord | null>(null);
+  const [existingApp, setExistingApp] = useState<ExistingApplication | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,15 +63,23 @@ function ExamDetail() {
   }, [examId, user]);
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (!exam) {
     return (
       <div className="max-w-2xl">
-        <p className="text-muted-foreground">{lang === "mn" ? "Шалгалт олдсонгүй" : "試験が見つかりません"}</p>
+        <p className="text-muted-foreground">
+          {lang === "mn" ? "Шалгалт олдсонгүй" : "Exam not found"}
+        </p>
         <Button asChild variant="outline" className="mt-4">
-          <Link to="/student/exams"><ArrowLeft className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Буцах" : "戻る"}</Link>
+          <Link to="/student/exams">
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Буцах" : "Back"}
+          </Link>
         </Button>
       </div>
     );
@@ -63,21 +91,45 @@ function ExamDetail() {
   return (
     <div className="max-w-3xl">
       <Button asChild variant="ghost" size="sm" className="mb-4">
-        <Link to="/student/exams"><ArrowLeft className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Шалгалтууд" : "試験一覧"}</Link>
+        <Link to="/student/exams">
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Шалгалтууд" : "All exams"}
+        </Link>
       </Button>
 
       <Card className="shadow-card">
         <CardHeader>
-          <div className="text-xs text-muted-foreground">{sessionLabel(exam.session, lang)} · {exam.year}</div>
+          <div className="text-xs text-muted-foreground">
+            {sessionLabel(exam.session, lang)} · {exam.year}
+          </div>
           <CardTitle className="text-2xl">{exam.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
-            <Field icon={Calendar} label={lang === "mn" ? "Шалгалтын өдөр" : "試験日"} value={formatDate(exam.exam_date, lang)} />
-            <Field icon={MapPin} label={lang === "mn" ? "Байршил" : "会場"} value={exam.location} />
-            <Field icon={Calendar} label={lang === "mn" ? "Бүртгэл эхлэх" : "受付開始"} value={formatDate(exam.registration_start, lang)} />
-            <Field icon={Calendar} label={lang === "mn" ? "Бүртгэл дуусах" : "受付終了"} value={formatDate(exam.registration_end, lang)} />
-            <Field icon={Users} label={lang === "mn" ? "Үлдсэн суудал" : "残席数"} value={`${exam.available_seats} / ${exam.total_seats}`} />
+            <Field
+              icon={Calendar}
+              label={lang === "mn" ? "Шалгалтын өдөр" : "Exam date"}
+              value={formatDate(exam.exam_date, lang)}
+            />
+            <Field
+              icon={MapPin}
+              label={lang === "mn" ? "Байршил" : "Location"}
+              value={exam.location}
+            />
+            <Field
+              icon={Calendar}
+              label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration opens"}
+              value={formatDate(exam.registration_start, lang)}
+            />
+            <Field
+              icon={Calendar}
+              label={lang === "mn" ? "Бүртгэл дуусах" : "Registration closes"}
+              value={formatDate(exam.registration_end, lang)}
+            />
+            <Field
+              icon={Users}
+              label={lang === "mn" ? "Үлдсэн суудал" : "Seats left"}
+              value={`${exam.available_seats} / ${exam.total_seats}`}
+            />
           </div>
 
           {exam.description && (
@@ -92,21 +144,27 @@ function ExamDetail() {
               <AlertDescription>
                 {lang === "mn"
                   ? `Та энэ шалгалтад аль хэдийн бүртгүүлсэн (${existingApp.application_number}).`
-                  : `すでにこの試験に出願済みです (${existingApp.application_number})`}
+                  : `You have already applied for this exam (${existingApp.application_number}).`}
                 <Button asChild variant="link" size="sm" className="px-2 h-auto">
                   <Link to="/student/applications/$id" params={{ id: existingApp.id }}>
-                    {lang === "mn" ? "Харах" : "表示"}
+                    {lang === "mn" ? "Харах" : "View"}
                   </Link>
                 </Button>
               </AlertDescription>
             </Alert>
           ) : !open ? (
             <Alert variant="destructive">
-              <AlertDescription>{lang === "mn" ? "Бүртгэлийн хугацаа дууссан" : "受付期間は終了しました"}</AlertDescription>
+              <AlertDescription>
+                {lang === "mn"
+                  ? "Бүртгэлийн хугацаа дууссан"
+                  : "The registration period has ended."}
+              </AlertDescription>
             </Alert>
           ) : exam.available_seats <= 0 ? (
             <Alert variant="destructive">
-              <AlertDescription>{lang === "mn" ? "Суудал дууссан" : "満席です"}</AlertDescription>
+              <AlertDescription>
+                {lang === "mn" ? "Суудал дууссан" : "No seats remain for this exam."}
+              </AlertDescription>
             </Alert>
           ) : null}
 
@@ -114,9 +172,11 @@ function ExamDetail() {
             size="lg"
             className="w-full"
             disabled={!canApply}
-            onClick={() => void navigate({ to: "/student/exams/$examId/apply", params: { examId } })}
+            onClick={() =>
+              void navigate({ to: "/student/exams/$examId/apply", params: { examId } })
+            }
           >
-            {lang === "mn" ? "Бүртгүүлэх" : "出願する"}
+            {lang === "mn" ? "Бүртгүүлэх" : "Apply now"}
           </Button>
         </CardContent>
       </Card>
@@ -124,7 +184,15 @@ function ExamDetail() {
   );
 }
 
-function Field({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function Field({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="flex items-start gap-2.5 rounded-md border border-border p-3">
       <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />

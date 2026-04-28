@@ -20,12 +20,19 @@ export function SiteHeader() {
           </div>
           <div className="leading-tight">
             <div className="text-sm font-semibold tracking-tight">EJU</div>
-            <div className="text-[10px] text-muted-foreground">日本留学試験</div>
+            <div className="text-[10px] text-muted-foreground">
+              Examination for Japanese University Admission
+            </div>
           </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm">
-          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors" activeOptions={{ exact: true }} activeProps={{ className: "text-foreground font-medium" }}>
+          <Link
+            to="/"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            activeOptions={{ exact: true }}
+            activeProps={{ className: "text-foreground font-medium" }}
+          >
             {t("appName")}
           </Link>
         </nav>

@@ -6,7 +6,7 @@ export function SiteFooter() {
           © {new Date().getFullYear()} EJU Бүртгэлийн Систем · 日本留学試験出願システム
         </div>
         <div className="text-xs">
-          ШУТИС МХТС
+         
         </div>
       </div>
     </footer>

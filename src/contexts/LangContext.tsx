@@ -15,7 +15,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("eju-lang") : null;
-    if (saved === "mn" || saved === "ja") setLangState(saved);
+    if (saved === "mn" || saved === "en") setLangState(saved);
   }, []);
 
   const setLang = (l: Lang) => {

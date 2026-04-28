@@ -8,7 +8,14 @@ import { useLang } from "@/contexts/LangContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { toast } from "sonner";
@@ -23,7 +30,11 @@ export function LoginForm() {
   const { t, lang } = useLang();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -35,12 +46,12 @@ export function LoginForm() {
     });
     setSubmitting(false);
     if (error) {
-      toast.error(lang === "mn" ? "Нэвтрэх амжилтгүй" : "ログイン失敗", {
+      toast.error(lang === "mn" ? "Нэвтрэх амжилтгүй" : "Login failed", {
         description: error.message,
       });
       return;
     }
-    toast.success(lang === "mn" ? "Тавтай морил!" : "ようこそ！");
+    toast.success(lang === "mn" ? "Тавтай морил!" : "Welcome back!");
     void navigate({ to: "/" });
   }
 
@@ -60,7 +71,7 @@ export function LoginForm() {
           <CardHeader>
             <CardTitle className="text-2xl">{t("login")}</CardTitle>
             <CardDescription className="text-bilingual-ja">
-              {lang === "mn" ? "Бүртгэлдээ нэвтэрнэ үү" : "アカウントにログイン"}
+              {lang === "mn" ? "Бүртгэлдээ нэвтэрнэ үү" : "Log in to your account"}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -77,8 +88,15 @@ export function LoginForm() {
                     {t("forgotPassword")}
                   </Link>
                 </div>
-                <Input id="password" type="password" autoComplete="current-password" {...register("password")} />
-                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  {...register("password")}
+                />
+                {errors.password && (
+                  <p className="text-xs text-destructive">{errors.password.message}</p>
+                )}
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-2">

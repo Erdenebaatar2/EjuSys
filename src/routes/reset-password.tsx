@@ -4,7 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
@@ -24,11 +31,13 @@ function ResetPasswordPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      toast.error(lang === "mn" ? "Нууц үг тохирохгүй байна" : "パスワードが一致しません");
+      toast.error(lang === "mn" ? "Нууц үг тохирохгүй байна" : "Passwords do not match");
       return;
     }
     if (password.length < 8) {
-      toast.error(lang === "mn" ? "Хамгийн багадаа 8 тэмдэгт" : "8文字以上必要です");
+      toast.error(
+        lang === "mn" ? "Хамгийн багадаа 8 тэмдэгт" : "Password must be at least 8 characters",
+      );
       return;
     }
     setSubmitting(true);
@@ -38,7 +47,7 @@ function ResetPasswordPage() {
       toast.error(error.message);
       return;
     }
-    toast.success(lang === "mn" ? "Нууц үг шинэчлэгдлээ" : "パスワードを更新しました");
+    toast.success(lang === "mn" ? "Нууц үг шинэчлэгдлээ" : "Password updated");
     void navigate({ to: "/login" });
   }
 
@@ -46,26 +55,38 @@ function ResetPasswordPage() {
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center px-4 py-10">
       <Card className="w-full max-w-md shadow-elegant border-border">
         <CardHeader>
-          <CardTitle>{lang === "mn" ? "Шинэ нууц үг" : "新しいパスワード"}</CardTitle>
+          <CardTitle>{lang === "mn" ? "Шинэ нууц үг" : "New password"}</CardTitle>
           <CardDescription>
-            {lang === "mn" ? "Шинэ нууц үгээ оруулна уу" : "新しいパスワードを入力"}
+            {lang === "mn" ? "Шинэ нууц үгээ оруулна уу" : "Enter your new password."}
           </CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="password">{lang === "mn" ? "Шинэ нууц үг" : "新しいパスワード"}</Label>
-              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Label htmlFor="password">{lang === "mn" ? "Шинэ нууц үг" : "New password"}</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirm">{lang === "mn" ? "Давтах" : "確認"}</Label>
-              <Input id="confirm" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+              <Label htmlFor="confirm">{lang === "mn" ? "Давтах" : "Confirm"}</Label>
+              <Input
+                id="confirm"
+                type="password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
             </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {lang === "mn" ? "Шинэчлэх" : "更新"}
+              {lang === "mn" ? "Шинэчлэх" : "Update password"}
             </Button>
           </CardFooter>
         </form>

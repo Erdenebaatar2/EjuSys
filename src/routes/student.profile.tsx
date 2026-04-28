@@ -20,7 +20,14 @@ function ProfilePage() {
   const { lang } = useLang();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ first_name: "", last_name: "", phone: "", address: "", email: "", passport_number: "" });
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    address: "",
+    email: "",
+    passport_number: "",
+  });
 
   useEffect(() => {
     void (async () => {
@@ -44,62 +51,83 @@ function ProfilePage() {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({
-      first_name: form.first_name,
-      last_name: form.last_name,
-      phone: form.phone || null,
-      address: form.address || null,
-    }).eq("id", user.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone || null,
+        address: form.address || null,
+      })
+      .eq("id", user.id);
     setSaving(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success(lang === "mn" ? "Хадгалагдлаа" : "保存しました");
+    toast.success(lang === "mn" ? "Хадгалагдлаа" : "Saved");
   }
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-3xl font-bold">{lang === "mn" ? "Профайл" : "プロフィール"}</h1>
+      <h1 className="text-3xl font-bold">{lang === "mn" ? "Профайл" : "Profile"}</h1>
       <Card className="mt-6 shadow-card">
         <CardHeader>
-          <CardTitle>{lang === "mn" ? "Хувийн мэдээлэл" : "個人情報"}</CardTitle>
+          <CardTitle>{lang === "mn" ? "Хувийн мэдээлэл" : "Personal information"}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>{lang === "mn" ? "Овог" : "姓"}</Label>
-                <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} required />
+                <Label>{lang === "mn" ? "Овог" : "Last name"}</Label>
+                <Input
+                  value={form.last_name}
+                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  required
+                />
               </div>
               <div className="space-y-1.5">
-                <Label>{lang === "mn" ? "Нэр" : "名"}</Label>
-                <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} required />
+                <Label>{lang === "mn" ? "Нэр" : "First name"}</Label>
+                <Input
+                  value={form.first_name}
+                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  required
+                />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>{lang === "mn" ? "Имэйл" : "メール"}</Label>
+              <Label>{lang === "mn" ? "Имэйл" : "Email"}</Label>
               <Input value={form.email} disabled />
             </div>
             <div className="space-y-1.5">
-              <Label>{lang === "mn" ? "Паспорт дугаар" : "パスポート番号"}</Label>
+              <Label>{lang === "mn" ? "Паспорт дугаар" : "Passport number"}</Label>
               <Input value={form.passport_number} disabled />
             </div>
             <div className="space-y-1.5">
-              <Label>{lang === "mn" ? "Утас" : "電話"}</Label>
-              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              <Label>{lang === "mn" ? "Утас" : "Phone"}</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>{lang === "mn" ? "Хаяг" : "住所"}</Label>
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Label>{lang === "mn" ? "Хаяг" : "Address"}</Label>
+              <Input
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
             </div>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {lang === "mn" ? "Хадгалах" : "保存"}
+              {lang === "mn" ? "Хадгалах" : "Save"}
             </Button>
           </form>
         </CardContent>

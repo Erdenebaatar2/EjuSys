@@ -5,14 +5,34 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, BookOpen, FileCheck2, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  FileCheck2,
+  ShieldCheck,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import heroImg from "@/assets/hero-eju.jpg";
+
+interface FeatureItem {
+  icon: LucideIcon;
+  titleMn: string;
+  titleJa: string;
+  descMn: string;
+  descJa: string;
+  link: string;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "EJU Бүртгэлийн Систем — Япон Их Сургуулийн Шалгалт" },
-      { name: "description", content: "Монгол оюутнуудад зориулсан EJU шалгалтын онлайн бүртгэлийн систем. Шалгалт сонгож, баримтаа байршуулж, статусаа хянаарай." },
+      {
+        name: "description",
+        content:
+          "Монгол оюутнуудад зориулсан EJU шалгалтын онлайн бүртгэлийн систем. Шалгалт сонгож, баримтаа байршуулж, статусаа хянаарай.",
+      },
       { property: "og:title", content: "EJU Бүртгэлийн Систем" },
       { property: "og:description", content: "Япон Их Сургуулийн шалгалтад онлайнаар бүртгүүл." },
     ],
@@ -28,27 +48,93 @@ function Index() {
     return <Navigate to={role === "admin" ? "/admin/dashboard" : "/student/dashboard"} />;
   }
 
+  const features: FeatureItem[] = [
+    {
+      icon: BookOpen,
+      titleMn: "Шалгалт сонгох",
+      titleJa: "Choose an exam",
+      descMn: "Нээлттэй EJU шалгалтуудаас өөрт тохирохыг сонгоно.",
+      descJa: "Pick the EJU exam session that fits you best.",
+      link: "/student/exams",
+    },
+    {
+      icon: FileCheck2,
+      titleMn: "Баримт бичиг илгээх",
+      titleJa: "Submit documents",
+      descMn: "Шаардлагатай файлуудаа онлайнаар байршуулах боломжтой.",
+      descJa: "Upload the required files directly in the system.",
+      link: "https://www.jasso.go.jp/en/eju/",
+    },
+    {
+      icon: ShieldCheck,
+      titleMn: "Бүртгэлээ хянах",
+      titleJa: "Track your status",
+      descMn: "Илгээсэн бүртгэлийн явц, баталгаажуулалтаа хараарай.",
+      descJa: "Follow review progress and approval updates in one place.",
+      link: "/student/applications",
+    },
+    {
+      icon: Sparkles,
+      titleMn: "Мэдээ мэдээлэл",
+      titleJa: "Stay informed",
+      descMn: "Шинэчлэлт, сануулга, шалгалтын мэдээллээ алдалгүй аваарай.",
+      descJa: "Keep up with exam notices, reminders, and updates.",
+      link: "https://www.studyinjapan.go.jp/en/",
+    },
+  ];
+
+  const isExternalLink = (link: string) => /^https?:\/\//i.test(link);
+  const isDownloadLink = (link: string) => /\.(pdf|doc|docx|xls|xlsx|zip)$/i.test(link);
+
+  const handleFeatureClick = (link: string) => {
+    if (isExternalLink(link)) {
+      window.open(link, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (isDownloadLink(link)) {
+      const anchor = document.createElement("a");
+      anchor.href = link;
+      anchor.download = link.split("/").pop() ?? "download";
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      return;
+    }
+
+    window.location.assign(link);
+  };
+
+  const handleFeatureKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, link: string) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleFeatureClick(link);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SiteHeader />
 
-      {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-subtle">
         <div className="container mx-auto grid gap-10 px-4 py-16 md:grid-cols-2 md:py-24 md:gap-12 items-center">
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-soft">
               <Sparkles className="h-3 w-3 text-primary" />
-              <span>{lang === "mn" ? "2026 оны бүртгэл нээлттэй" : "2026年度 出願受付中"}</span>
+              <span>
+                {lang === "mn" ? "2026 оны бүртгэл нээлттэй" : "2026 applications are open"}
+              </span>
             </div>
             <h1 className="mt-5 text-4xl font-bold tracking-tight text-foreground md:text-5xl lg:text-6xl">
               {t("heroTitle")}
             </h1>
             <p className="mt-3 text-lg text-bilingual-ja text-muted-foreground">
-              日本留学への第一歩
+              {lang === "mn"
+                ? "Японд суралцах дараагийн алхмаа эндээс эхлүүлээрэй"
+                : "Start your Japan study journey here"}
             </p>
-            <p className="mt-5 text-base text-muted-foreground md:text-lg">
-              {t("heroSub")}
-            </p>
+            <p className="mt-5 text-base text-muted-foreground md:text-lg">{t("heroSub")}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="shadow-elegant">
                 <Link to="/register">
@@ -64,7 +150,7 @@ function Index() {
             <div className="absolute inset-0 -z-10 bg-gradient-hero opacity-10 blur-3xl rounded-full" />
             <img
               src={heroImg}
-              alt="EJU Японы их сургуулийн оролт"
+              alt="EJU шалгалтын бүртгэлийн зураг"
               width={1536}
               height={1024}
               className="rounded-2xl border border-border shadow-elegant"
@@ -73,37 +159,27 @@ function Index() {
         </div>
       </section>
 
-      {/* Features */}
       <section className="container mx-auto px-4 py-16">
-        <div className="grid gap-5 md:grid-cols-3">
-          {[
-            {
-              icon: BookOpen,
-              titleMn: "Шалгалт сонгох",
-              titleJa: "試験を選ぶ",
-              descMn: "Нээлттэй EJU шалгалтуудыг харж, өөрт тохирохыг сонгоорой.",
-            },
-            {
-              icon: FileCheck2,
-              titleMn: "Баримт байршуулах",
-              titleJa: "書類提出",
-              descMn: "Паспорт, цээж зураг, шаардлагатай мэдээллээ цахимаар илгээнэ.",
-            },
-            {
-              icon: ShieldCheck,
-              titleMn: "Статус хянах",
-              titleJa: "状況確認",
-              descMn: "Бүртгэлийн төлөв, зөвшөөрсөн эсэхийг бодит цагт харна.",
-            },
-          ].map((f, i) => (
-            <Card key={i} className="shadow-card border-border">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {features.map((feature) => (
+            <Card
+              key={feature.link}
+              role="link"
+              tabIndex={0}
+              onClick={() => handleFeatureClick(feature.link)}
+              onKeyDown={(event) => handleFeatureKeyDown(event, feature.link)}
+              className="shadow-card border-border cursor-pointer transition-colors hover:border-primary/40 hover:bg-muted/10"
+            >
               <CardContent className="pt-6">
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <f.icon className="h-5 w-5" />
+                  <feature.icon className="h-5 w-5" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{f.titleMn}</h3>
-                <p className="text-sm text-bilingual-ja text-muted-foreground">{f.titleJa}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{f.descMn}</p>
+                <h3 className="mt-4 text-lg font-semibold">
+                  {lang === "mn" ? feature.titleMn : feature.titleJa}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {lang === "mn" ? feature.descMn : feature.descJa}
+                </p>
               </CardContent>
             </Card>
           ))}

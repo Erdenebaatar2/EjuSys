@@ -13,7 +13,12 @@ export const Route = createFileRoute("/admin/dashboard")({
 function AdminDashboard() {
   const { lang } = useLang();
   const [stats, setStats] = useState({
-    students: 0, exams: 0, total: 0, pending: 0, approved: 0, rejected: 0,
+    students: 0,
+    exams: 0,
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
   });
 
   useEffect(() => {
@@ -22,9 +27,18 @@ function AdminDashboard() {
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("exams").select("id", { count: "exact", head: true }),
         supabase.from("applications").select("id", { count: "exact", head: true }),
-        supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "approved"),
-        supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+        supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved"),
+        supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "rejected"),
       ]);
       setStats({
         students: students.count ?? 0,
@@ -40,28 +54,60 @@ function AdminDashboard() {
   return (
     <div className="space-y-8 max-w-6xl">
       <div>
-        <h1 className="text-3xl font-bold">{lang === "mn" ? "Хяналтын самбар" : "ダッシュボード"}</h1>
+        <h1 className="text-3xl font-bold">{lang === "mn" ? "Хяналтын самбар" : "Dashboard"}</h1>
         <p className="mt-1 text-muted-foreground text-bilingual-ja">
-          {lang === "mn" ? "Системийн ерөнхий статистик" : "システム全体の統計"}
+          {lang === "mn" ? "Системийн ерөнхий статистик" : "High-level system statistics"}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard icon={Users} label={lang === "mn" ? "Нийт оюутан" : "学生数"} value={stats.students} tone="primary" />
-        <StatCard icon={BookOpen} label={lang === "mn" ? "Шалгалт" : "試験"} value={stats.exams} tone="primary" />
-        <StatCard icon={FileText} label={lang === "mn" ? "Нийт бүртгэл" : "出願総数"} value={stats.total} tone="primary" />
-        <StatCard icon={Clock} label={lang === "mn" ? "Хүлээгдэж буй" : "審査中"} value={stats.pending} tone="warning" />
-        <StatCard icon={CheckCircle2} label={lang === "mn" ? "Зөвшөөрсөн" : "承認済み"} value={stats.approved} tone="success" />
-        <StatCard icon={XCircle} label={lang === "mn" ? "Татгалзсан" : "却下"} value={stats.rejected} tone="destructive" />
+        <StatCard
+          icon={Users}
+          label={lang === "mn" ? "Нийт оюутан" : "Students"}
+          value={stats.students}
+          tone="primary"
+        />
+        <StatCard
+          icon={BookOpen}
+          label={lang === "mn" ? "Шалгалт" : "Exams"}
+          value={stats.exams}
+          tone="primary"
+        />
+        <StatCard
+          icon={FileText}
+          label={lang === "mn" ? "Нийт бүртгэл" : "Applications"}
+          value={stats.total}
+          tone="primary"
+        />
+        <StatCard
+          icon={Clock}
+          label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
+          value={stats.pending}
+          tone="warning"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label={lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
+          value={stats.approved}
+          tone="success"
+        />
+        <StatCard
+          icon={XCircle}
+          label={lang === "mn" ? "Татгалзсан" : "Rejected"}
+          value={stats.rejected}
+          tone="destructive"
+        />
       </div>
 
       <Card className="shadow-card">
-        <CardHeader><CardTitle>{lang === "mn" ? "Хурдан үйлдэл" : "クイックアクション"}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>{lang === "mn" ? "Хурдан үйлдэл" : "Quick actions"}</CardTitle>
+        </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
             {lang === "mn"
               ? "Зүүн талын цэснээс шалгалт үүсгэх, бүртгэл хянах, оюутан удирдах боломжтой."
-              : "左側のメニューから試験作成、出願管理、学生管理ができます。"}
+              : "Use the left menu to create exams, review applications, and manage students."}
           </p>
         </CardContent>
       </Card>
@@ -69,9 +115,15 @@ function AdminDashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, tone = "primary" }: {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  tone = "primary",
+}: {
   icon: React.ComponentType<{ className?: string }>;
-  label: string; value: number;
+  label: string;
+  value: number;
   tone?: "primary" | "warning" | "success" | "destructive";
 }) {
   const toneCls = {

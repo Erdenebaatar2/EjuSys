@@ -4,7 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 import { GraduationCap, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { useLang } from "@/contexts/LangContext";
@@ -31,8 +38,8 @@ function ForgotPasswordPage() {
       toast.error(error.message);
       return;
     }
-    toast.success(lang === "mn" ? "Имэйл илгээгдлээ" : "メールを送信しました", {
-      description: lang === "mn" ? "Имэйл хайрцгаа шалгана уу" : "メールをご確認ください",
+    toast.success(lang === "mn" ? "Имэйл илгээгдлээ" : "Reset email sent", {
+      description: lang === "mn" ? "Имэйл хайрцгаа шалгана уу" : "Please check your inbox.",
     });
   }
 
@@ -50,25 +57,33 @@ function ForgotPasswordPage() {
         </div>
         <Card className="shadow-elegant border-border">
           <CardHeader>
-            <CardTitle>{lang === "mn" ? "Нууц үг сэргээх" : "パスワード再設定"}</CardTitle>
+            <CardTitle>{lang === "mn" ? "Нууц үг сэргээх" : "Reset password"}</CardTitle>
             <CardDescription>
-              {lang === "mn" ? "Бүртгэлтэй имэйлээ оруулна уу" : "登録メールアドレスを入力"}
+              {lang === "mn"
+                ? "Бүртгэлтэй имэйлээ оруулна уу"
+                : "Enter the email linked to your account."}
             </CardDescription>
           </CardHeader>
           <form onSubmit={onSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">{lang === "mn" ? "Имэйл" : "メール"}</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Label htmlFor="email">{lang === "mn" ? "Имэйл" : "Email"}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {lang === "mn" ? "Холбоос илгээх" : "リンクを送信"}
+                {lang === "mn" ? "Холбоос илгээх" : "Send reset link"}
               </Button>
               <Link to="/login" className="text-xs text-primary hover:underline">
-                ← {lang === "mn" ? "Буцах" : "戻る"}
+                ← {lang === "mn" ? "Буцах" : "Back"}
               </Link>
             </CardFooter>
           </form>

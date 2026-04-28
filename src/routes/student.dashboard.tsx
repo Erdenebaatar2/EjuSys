@@ -21,14 +21,29 @@ function StudentDashboard() {
   useEffect(() => {
     void (async () => {
       if (!user) return;
-      const { data: profile } = await supabase.from("profiles").select("first_name").eq("id", user.id).maybeSingle();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name")
+        .eq("id", user.id)
+        .maybeSingle();
       if (profile) setFirstName(profile.first_name);
 
       const today = new Date().toISOString().slice(0, 10);
       const [apps, openExams, pending] = await Promise.all([
-        supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("exams").select("id", { count: "exact", head: true }).eq("is_active", true).gte("registration_end", today),
-        supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
+        supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id),
+        supabase
+          .from("exams")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .gte("registration_end", today),
+        supabase
+          .from("applications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "pending"),
       ]);
       setStats({
         apps: apps.count ?? 0,
@@ -42,32 +57,48 @@ function StudentDashboard() {
     <div className="space-y-8 max-w-6xl">
       <div>
         <h1 className="text-3xl font-bold">
-          {lang === "mn" ? `Сайн байна уу, ${firstName || "оюутан"}!` : `こんにちは、${firstName || "学生"}さん！`}
+          {lang === "mn"
+            ? `Сайн байна уу, ${firstName || "оюутан"}!`
+            : `Hello, ${firstName || "student"}!`}
         </h1>
         <p className="mt-1 text-muted-foreground text-bilingual-ja">
-          {lang === "mn" ? "EJU бүртгэлийн системд тавтай морил" : "EJU出願システムへようこそ"}
+          {lang === "mn"
+            ? "EJU бүртгэлийн системд тавтай морил"
+            : "Welcome to the EJU registration system"}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={BookOpen} label={lang === "mn" ? "Нээлттэй шалгалт" : "受付中の試験"} value={stats.openExams} />
-        <StatCard icon={FileText} label={lang === "mn" ? "Миний бүртгэл" : "マイ出願"} value={stats.apps} />
-        <StatCard icon={Clock} label={lang === "mn" ? "Хүлээгдэж буй" : "審査中"} value={stats.pending} />
+        <StatCard
+          icon={BookOpen}
+          label={lang === "mn" ? "Нээлттэй шалгалт" : "Open exams"}
+          value={stats.openExams}
+        />
+        <StatCard
+          icon={FileText}
+          label={lang === "mn" ? "Миний бүртгэл" : "My applications"}
+          value={stats.apps}
+        />
+        <StatCard
+          icon={Clock}
+          label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
+          value={stats.pending}
+        />
       </div>
 
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>{lang === "mn" ? "Дараагийн алхам" : "次のステップ"}</CardTitle>
+          <CardTitle>{lang === "mn" ? "Дараагийн алхам" : "Next step"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
             {lang === "mn"
               ? "Нээлттэй шалгалтыг үзэж, өөрт тохирохыг сонгож бүртгүүлээрэй."
-              : "受付中の試験を確認し、出願してください。"}
+              : "Review the open exams and submit an application that fits you."}
           </p>
           <Button asChild>
             <Link to="/student/exams">
-              {lang === "mn" ? "Шалгалт харах" : "試験を見る"}
+              {lang === "mn" ? "Шалгалт харах" : "View exams"}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -77,7 +108,15 @@ function StudentDashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+}) {
   return (
     <Card className="shadow-card">
       <CardContent className="pt-6">

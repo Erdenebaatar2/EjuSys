@@ -1,9 +1,24 @@
 import type { Lang } from "@/lib/i18n";
 
+const EN_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 export function formatDate(dateStr: string, lang: Lang = "mn"): string {
   const d = new Date(dateStr);
   if (lang === "ja") {
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+    return `${EN_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -16,27 +31,41 @@ export function isRegistrationOpen(start: string, end: string): boolean {
 
 export function statusLabel(status: string, lang: Lang = "mn"): string {
   const map: Record<string, { mn: string; ja: string }> = {
-    pending: { mn: "Хүлээгдэж буй", ja: "審査中" },
-    approved: { mn: "Зөвшөөрсөн", ja: "承認済み" },
-    rejected: { mn: "Татгалзсан", ja: "却下" },
-    paid: { mn: "Төлсөн", ja: "支払済" },
-    unpaid: { mn: "Төлөөгүй", ja: "未払い" },
+    pending: { mn: "Хүлээгдэж буй", ja: "Pending" },
+    approved: { mn: "Зөвшөөрсөн", ja: "Approved" },
+    rejected: { mn: "Татгалзсан", ja: "Rejected" },
+    paid: { mn: "Төлсөн", ja: "Paid" },
+    unpaid: { mn: "Төлөөгүй", ja: "Unpaid" },
   };
   return map[status]?.[lang] ?? status;
 }
 
 export function sessionLabel(s: string, lang: Lang = "mn"): string {
-  if (s === "first") return lang === "mn" ? "1-р улирал" : "第1回";
-  if (s === "second") return lang === "mn" ? "2-р улирал" : "第2回";
+  if (s === "first") return lang === "mn" ? "1-р улирал" : "Session 1";
+  if (s === "second") return lang === "mn" ? "2-р улирал" : "Session 2";
   return s;
 }
 
 export function categoryLabel(cat: string, lang: Lang = "mn"): string {
   const map: Record<string, { mn: string; ja: string }> = {
-    japanese: { mn: "Япон хэл", ja: "日本語" },
-    math: { mn: "Математик", ja: "数学" },
-    science: { mn: "Шинжлэх ухаан", ja: "理科" },
-    general: { mn: "Ерөнхий хичээл", ja: "総合科目" },
+    japanese: { mn: "Япон хэл", ja: "Japanese" },
+    math: { mn: "Математик", ja: "Mathematics" },
+    science: { mn: "Шинжлэх ухаан", ja: "Science" },
+    general: { mn: "Ерөнхий хичээл", ja: "General subjects" },
   };
   return map[cat]?.[lang] ?? cat;
+}
+
+export function subjectLabel(code: string, lang: Lang = "mn"): string {
+  const map: Record<string, { mn: string; ja: string }> = {
+    J1: { mn: "Япон хэл (дээд түвшин)", ja: "Japanese (advanced)" },
+    J2: { mn: "Япон хэл (суурь түвшин)", ja: "Japanese (basic)" },
+    K1: { mn: "Математик курс 1", ja: "Mathematics course 1" },
+    K2: { mn: "Математик курс 2", ja: "Mathematics course 2" },
+    PHY: { mn: "Физик", ja: "Physics" },
+    CHEM: { mn: "Хими", ja: "Chemistry" },
+    BIO: { mn: "Биологи", ja: "Biology" },
+    GEN: { mn: "Ерөнхий хичээл", ja: "General subjects" },
+  };
+  return map[code]?.[lang] ?? code;
 }
