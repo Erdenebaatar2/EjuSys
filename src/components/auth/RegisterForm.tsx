@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
 import { useLang } from "@/contexts/LangContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,35 +47,32 @@ export function RegisterForm() {
 
   async function onSubmit(v: FormValues) {
     setSubmitting(true);
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email: v.email,
-      password: v.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          first_name: v.first_name,
-          last_name: v.last_name,
-          passport_number: v.passport_number,
-          phone: v.phone ?? null,
-        },
-      },
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(lang === "mn" ? "Бүртгүүлэх амжилтгүй" : "Registration failed", {
-        description: error.message,
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: v.email,
+          password: v.password,
+          firstName: v.first_name,
+          lastName: v.last_name,
+        }),
       });
-      return;
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        toast.error(lang === "mn" ? "Бүртгүүлэх амжилтгүй" : "Registration failed", {
+          description: body.message ?? "Алдаа гарлаа",
+        });
+        setSubmitting(false);
+        return;
+      }
+      toast.success(lang === "mn" ? "Бүртгэл амжилттай!" : "Registration successful!");
+      void navigate({ to: "/login" });
+    } catch {
+      toast.error(lang === "mn" ? "Сервертэй холбогдох боломжгүй" : "Could not reach the server");
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(
-      lang === "mn" ? "Бүртгэл амжилттай!" : "Registration successful!",
-      {
-        description:
-          lang === "mn" ? "Имэйлээ шалгана уу" : "Please check your email.",
-      },
-    );
-    void navigate({ to: "/login" });
   }
 
   const inputCls = "h-11 rounded-xl border-border/60 bg-white/80";

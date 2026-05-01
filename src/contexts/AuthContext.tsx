@@ -1,73 +1,91 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "student" | "admin";
 
+export interface AppUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+}
+
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AppUser | null;
   role: AppRole | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ error?: string; role?: AppRole }>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = "jwt_token";
+
+function deriveRole(roles: string[]): AppRole | null {
+  if (roles.includes("ADMIN")) return "admin";
+  if (roles.includes("STUDENT")) return "student";
+  return null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // CRITICAL: set up listener BEFORE getSession
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        // Defer role fetch to avoid blocking auth callback
-        setTimeout(() => {
-          void fetchRole(sess.user.id);
-        }, 0);
-      } else {
-        setRole(null);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session: sess } }) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        void fetchRole(sess.user.id);
-      }
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+      return;
+    }
+    fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Invalid token");
+        return res.json() as Promise<AppUser & { roles: string[] }>;
+      })
+      .then((data) => {
+        setUser(data);
+        setRole(deriveRole(data.roles));
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  async function fetchRole(userId: string) {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .order("role", { ascending: true });
-    // admin > student priority
-    if (data?.some((r) => r.role === "admin")) setRole("admin");
-    else if (data?.some((r) => r.role === "student")) setRole("student");
-    else setRole(null);
+  async function login(email: string, password: string): Promise<{ error?: string }> {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        return { error: body.message ?? "Нэвтрэх амжилтгүй" };
+      }
+      const data = (await res.json()) as { token: string } & AppUser & { roles: string[] };
+      localStorage.setItem(TOKEN_KEY, data.token);
+      const computedRole = deriveRole(data.roles);
+      setUser({ id: data.id, email: data.email, firstName: data.firstName, lastName: data.lastName, roles: data.roles });
+      setRole(computedRole);
+      return { role: computedRole ?? undefined };
+    } catch {
+      return { error: "Сервертэй холбогдох боломжгүй байна" };
+    }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  function signOut() {
+    localStorage.removeItem(TOKEN_KEY);
     setUser(null);
-    setSession(null);
     setRole(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role, loading, login, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -77,4 +95,9 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
 }

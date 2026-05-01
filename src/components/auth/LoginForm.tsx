@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ type FormValues = z.infer<typeof schema>;
 
 export function LoginForm() {
   const { t, lang } = useLang();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const {
@@ -33,19 +34,17 @@ export function LoginForm() {
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
+    const result = await login(values.email, values.password);
     setSubmitting(false);
-    if (error) {
+    if (result.error) {
       toast.error(lang === "mn" ? "Нэвтрэх амжилтгүй" : "Login failed", {
-        description: error.message,
+        description: result.error,
       });
       return;
     }
     toast.success(lang === "mn" ? "Тавтай морил!" : "Welcome back!");
-    void navigate({ to: "/" });
+    const dest = result.role === "admin" ? "/admin/dashboard" : "/student/dashboard";
+    void navigate({ to: dest });
   }
 
   const inputCls = "h-11 rounded-xl border-border/60 bg-white/80";
