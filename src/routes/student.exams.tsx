@@ -62,7 +62,7 @@ function StudentExams() {
         </h1>
         <p className="mt-1 text-muted-foreground text-bilingual-ja">
           {lang === "mn"
-            ? "Бүртгүүлэх боломжтой EJU шалгалтуудын жагсаалт"
+            ? "Бүртгүүлэх боломжтой EJU шалгалтын жагсаалт"
             : "Browse the EJU exams that are currently open for application"}
         </p>
       </div>
