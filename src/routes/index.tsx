@@ -13,7 +13,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import heroImg from "@/assets/hero-eju.jpg";
+import heroImg from "@/assets/picture1.jpg";
 
 interface FeatureItem {
   icon: LucideIcon;
