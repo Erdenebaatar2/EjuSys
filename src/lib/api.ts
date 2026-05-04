@@ -28,7 +28,7 @@ export const api = {
 
   // Token-той request
   authFetch: async (url: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("jwt_token");
     const res = await fetch(`${API_URL}${url}`, {
       ...options,
       headers: {

@@ -55,14 +55,17 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponse(jwt.issueToken(u), UserResponse.from(u)));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication auth) {
-        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-        UUID id = (UUID) auth.getPrincipal();
-        return userRepo.findById(id)
-                .<ResponseEntity<?>>map(u -> ResponseEntity.ok(UserResponse.from(u)))
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+   @GetMapping("/me")
+public ResponseEntity<?> me(Authentication auth) {
+    if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+    Object principal = auth.getPrincipal();
+    if (!(principal instanceof UUID id)) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    return userRepo.findById(id)
+            .<ResponseEntity<?>>map(u -> ResponseEntity.ok(UserResponse.from(u)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+   }
 }

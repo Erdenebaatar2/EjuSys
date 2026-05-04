@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -27,7 +28,7 @@ public class AdminController {
 
     @PostMapping("/users/{id}/promote")
     public ResponseEntity<?> promote(@PathVariable UUID id) {
-        return userRepo.findById(id).<ResponseEntity<?>>map(u -> {
+        return userRepo.findById(Objects.requireNonNull(id)).<ResponseEntity<?>>map(u -> {
             EnumSet<Role> roles = EnumSet.copyOf(u.getRoles());
             roles.add(Role.ADMIN);
             u.setRoles(roles);
@@ -39,7 +40,7 @@ public class AdminController {
 
     @PostMapping("/users/{id}/demote")
     public ResponseEntity<?> demote(@PathVariable UUID id) {
-        return userRepo.findById(id).<ResponseEntity<?>>map(u -> {
+        return userRepo.findById(Objects.requireNonNull(id)).<ResponseEntity<?>>map(u -> {
             EnumSet<Role> roles = EnumSet.copyOf(u.getRoles());
             roles.remove(Role.ADMIN);
             if (roles.isEmpty()) roles.add(Role.STUDENT);
