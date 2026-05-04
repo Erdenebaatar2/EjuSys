@@ -19,7 +19,7 @@ interface SelectedSubject {
   code: string;
   name_mn: string;
   name_ja: string;
-  category: string;
+  category: "general" | "japanese" | "math" | "science";
 }
 
 interface ApplicationDetailRecord {
