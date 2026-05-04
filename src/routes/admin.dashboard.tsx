@@ -1,114 +1,109 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Clock, CheckCircle2, XCircle, BookOpen } from "lucide-react";
+import { Users, FileText, Clock, CheckCircle2, XCircle, BookOpen, Loader2 } from "lucide-react";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Админ — Хяналтын самбар | EJU" }] }),
   component: AdminDashboard,
 });
 
+interface RecentApplication {
+  id: string;
+  applicationNumber: string;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+  studentName?: string;
+  studentEmail?: string;
+}
+
+interface DashboardStats {
+  totalUsers: number;
+  pendingApplications: number;
+  approvedApplications: number;
+  rejectedApplications: number;
+  activeExams: number;
+  recentApplications: RecentApplication[];
+}
+
 function AdminDashboard() {
   const { lang } = useLang();
-  const [stats, setStats] = useState({
-    students: 0,
-    exams: 0,
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin", "dashboard"],
+    queryFn: () => apiGet<DashboardStats>("/api/admin/dashboard"),
   });
 
-  useEffect(() => {
-    void (async () => {
-      const [students, exams, total, pending, approved, rejected] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("exams").select("id", { count: "exact", head: true }),
-        supabase.from("applications").select("id", { count: "exact", head: true }),
-        supabase
-          .from("applications")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("applications")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "approved"),
-        supabase
-          .from("applications")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "rejected"),
-      ]);
-      setStats({
-        students: students.count ?? 0,
-        exams: exams.count ?? 0,
-        total: total.count ?? 0,
-        pending: pending.count ?? 0,
-        approved: approved.count ?? 0,
-        rejected: rejected.count ?? 0,
-      });
-    })();
-  }, []);
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (error || !data) {
+    return (
+      <p className="text-destructive">
+        {lang === "mn" ? "Алдаа: " : "Error: "}
+        {(error as Error)?.message ?? "—"}
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-6xl">
       <div>
         <h1 className="text-3xl font-bold">{lang === "mn" ? "Хяналтын самбар" : "Dashboard"}</h1>
-        <p className="mt-1 text-muted-foreground text-bilingual-ja">
+        <p className="mt-1 text-muted-foreground">
           {lang === "mn" ? "Системийн ерөнхий статистик" : "High-level system statistics"}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={Users}
-          label={lang === "mn" ? "Нийт оюутан" : "Students"}
-          value={stats.students}
-          tone="primary"
-        />
-        <StatCard
-          icon={BookOpen}
-          label={lang === "mn" ? "Шалгалт" : "Exams"}
-          value={stats.exams}
-          tone="primary"
-        />
+        <StatCard icon={Users} label={lang === "mn" ? "Нийт оюутан" : "Students"} value={data.totalUsers} tone="primary" />
+        <StatCard icon={BookOpen} label={lang === "mn" ? "Идэвхтэй шалгалт" : "Active exams"} value={data.activeExams} tone="primary" />
         <StatCard
           icon={FileText}
           label={lang === "mn" ? "Нийт бүртгэл" : "Applications"}
-          value={stats.total}
+          value={data.pendingApplications + data.approvedApplications + data.rejectedApplications}
           tone="primary"
         />
-        <StatCard
-          icon={Clock}
-          label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
-          value={stats.pending}
-          tone="warning"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label={lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
-          value={stats.approved}
-          tone="success"
-        />
-        <StatCard
-          icon={XCircle}
-          label={lang === "mn" ? "Татгалзсан" : "Rejected"}
-          value={stats.rejected}
-          tone="destructive"
-        />
+        <StatCard icon={Clock} label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"} value={data.pendingApplications} tone="warning" />
+        <StatCard icon={CheckCircle2} label={lang === "mn" ? "Зөвшөөрсөн" : "Approved"} value={data.approvedApplications} tone="success" />
+        <StatCard icon={XCircle} label={lang === "mn" ? "Татгалзсан" : "Rejected"} value={data.rejectedApplications} tone="destructive" />
       </div>
 
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>{lang === "mn" ? "Хурдан үйлдэл" : "Quick actions"}</CardTitle>
+          <CardTitle>{lang === "mn" ? "Сүүлийн 5 бүртгэл" : "Recent 5 applications"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            {lang === "mn"
-              ? "Зүүн талын цэснээс шалгалт үүсгэх, бүртгэл хянах, оюутан удирдах боломжтой."
-              : "Use the left menu to create exams, review applications, and manage students."}
-          </p>
+          {data.recentApplications.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn" ? "Бүртгэл алга" : "No applications yet"}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {data.recentApplications.map((a) => (
+                <Link
+                  key={a.id}
+                  to="/admin/applications"
+                  className="flex items-center justify-between rounded-md border p-3 hover:bg-muted/50"
+                >
+                  <div>
+                    <div className="font-medium">{a.applicationNumber}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {a.studentName ?? "—"} · {a.studentEmail ?? ""}
+                    </div>
+                  </div>
+                  <StatusBadge status={a.status as "pending" | "approved" | "rejected"} />
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
