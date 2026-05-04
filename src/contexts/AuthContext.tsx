@@ -14,7 +14,7 @@ interface AuthContextType {
   user: AppUser | null;
   role: AppRole | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string; role?: AppRole }>;
+  login: (email: string, password: string) => Promise<{ error?: string; role?: AppRole | null }>;
   signOut: () => void;
 }
 

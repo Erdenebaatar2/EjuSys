@@ -17,7 +17,7 @@ const EN_MONTHS = [
 
 export function formatDate(dateStr: string, lang: Lang = "mn"): string {
   const d = new Date(dateStr);
-  if (lang === "ja") {
+  if (lang === "en") {
     return `${EN_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -30,12 +30,12 @@ export function isRegistrationOpen(start: string, end: string): boolean {
 }
 
 export function statusLabel(status: string, lang: Lang = "mn"): string {
-  const map: Record<string, { mn: string; ja: string }> = {
-    pending: { mn: "Хүлээгдэж буй", ja: "Pending" },
-    approved: { mn: "Зөвшөөрсөн", ja: "Approved" },
-    rejected: { mn: "Татгалзсан", ja: "Rejected" },
-    paid: { mn: "Төлсөн", ja: "Paid" },
-    unpaid: { mn: "Төлөөгүй", ja: "Unpaid" },
+  const map: Record<string, { mn: string; en: string }> = {
+    pending: { mn: "Хүлээгдэж буй", en: "Pending" },
+    approved: { mn: "Зөвшөөрсөн", en: "Approved" },
+    rejected: { mn: "Татгалзсан", en: "Rejected" },
+    paid: { mn: "Төлсөн", en: "Paid" },
+    unpaid: { mn: "Төлөөгүй", en: "Unpaid" },
   };
   return map[status]?.[lang] ?? status;
 }
@@ -47,25 +47,25 @@ export function sessionLabel(s: string, lang: Lang = "mn"): string {
 }
 
 export function categoryLabel(cat: string, lang: Lang = "mn"): string {
-  const map: Record<string, { mn: string; ja: string }> = {
-    japanese: { mn: "Япон хэл", ja: "Japanese" },
-    math: { mn: "Математик", ja: "Mathematics" },
-    science: { mn: "Шинжлэх ухаан", ja: "Science" },
-    general: { mn: "Ерөнхий хичээл", ja: "General subjects" },
+  const map: Record<string, { mn: string; en: string }> = {
+    japanese: { mn: "Япон хэл", en: "Japanese" },
+    math: { mn: "Математик", en: "Mathematics" },
+    science: { mn: "Шинжлэх ухаан", en: "Science" },
+    general: { mn: "Ерөнхий хичээл", en: "General subjects" },
   };
   return map[cat]?.[lang] ?? cat;
 }
 
 export function subjectLabel(code: string, lang: Lang = "mn"): string {
-  const map: Record<string, { mn: string; ja: string }> = {
-    J1: { mn: "Япон хэл (дээд түвшин)", ja: "Japanese (advanced)" },
-    J2: { mn: "Япон хэл (суурь түвшин)", ja: "Japanese (basic)" },
-    K1: { mn: "Математик курс 1", ja: "Mathematics course 1" },
-    K2: { mn: "Математик курс 2", ja: "Mathematics course 2" },
-    PHY: { mn: "Физик", ja: "Physics" },
-    CHEM: { mn: "Хими", ja: "Chemistry" },
-    BIO: { mn: "Биологи", ja: "Biology" },
-    GEN: { mn: "Ерөнхий хичээл", ja: "General subjects" },
+  const map: Record<string, { mn: string; en: string }> = {
+    J1: { mn: "Япон хэл (дээд түвшин)", en: "Japanese (advanced)" },
+    J2: { mn: "Япон хэл (суурь түвшин)", en: "Japanese (basic)" },
+    K1: { mn: "Математик курс 1", en: "Mathematics course 1" },
+    K2: { mn: "Математик курс 2", en: "Mathematics course 2" },
+    PHY: { mn: "Физик", en: "Physics" },
+    CHEM: { mn: "Хими", en: "Chemistry" },
+    BIO: { mn: "Биологи", en: "Biology" },
+    GEN: { mn: "Ерөнхий хичээл", en: "General subjects" },
   };
   return map[code]?.[lang] ?? code;
 }

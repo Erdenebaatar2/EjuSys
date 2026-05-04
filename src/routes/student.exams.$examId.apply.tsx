@@ -260,7 +260,7 @@ function ApplyPage() {
                           {lang === "mn" ? s.name_mn : subjectLabel(s.code, lang)}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {s.code} · {lang === "mn" ? subjectLabel(s.code, "ja") : s.name_mn}
+                          {s.code} · {lang === "mn" ? subjectLabel(s.code, "en") : s.name_mn}
                         </div>
                       </div>
                     </label>
