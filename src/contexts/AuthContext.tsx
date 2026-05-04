@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
+const API_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
+
 export type AppRole = "student" | "admin";
 
 export interface AppUser {
@@ -14,7 +16,7 @@ interface AuthContextType {
   user: AppUser | null;
   role: AppRole | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error?: string; role?: AppRole }>;
+  login: (email: string, password: string) => Promise<{ error?: string; role?: AppRole | null }>;
   signOut: () => void;
 }
 
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    fetch("/api/auth/me", {
+    fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -56,9 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email: string, password: string): Promise<{ error?: string }> {
+  async function login(email: string, password: string): Promise<{ error?: string; role?: AppRole | null }> {
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
