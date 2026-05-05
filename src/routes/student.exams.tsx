@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,15 +16,15 @@ export const Route = createFileRoute("/student/exams")({
 interface Exam {
   id: string;
   name: string;
-  exam_date: string;
+  examDate: string;
   location: string;
-  total_seats: number;
-  available_seats: number;
-  registration_start: string;
-  registration_end: string;
+  totalSeats: number;
+  availableSeats: number;
+  registrationStart: string;
+  registrationEnd: string;
   session: "first" | "second";
   year: number;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 function StudentExams() {
@@ -33,17 +33,10 @@ function StudentExams() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void (async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const { data } = await supabase
-        .from("exams")
-        .select("*")
-        .eq("is_active", true)
-        .gte("registration_end", today)
-        .order("exam_date", { ascending: true });
-      setExams((data ?? []) as Exam[]);
-      setLoading(false);
-    })();
+    void apiGet<Exam[]>("/api/student/exams")
+      .then((data) => setExams(data ?? []))
+      .catch(() => setExams([]))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -78,9 +71,9 @@ function StudentExams() {
       ) : (
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {exams.map((e) => {
-            const open = isRegistrationOpen(e.registration_start, e.registration_end);
-            const seatsLeft = e.available_seats;
-            const fillPct = ((e.total_seats - seatsLeft) / e.total_seats) * 100;
+            const open = isRegistrationOpen(e.registrationStart, e.registrationEnd);
+            const seatsLeft = e.availableSeats;
+            const fillPct = ((e.totalSeats - seatsLeft) / e.totalSeats) * 100;
             return (
               <Card key={e.id} className="shadow-card hover:shadow-elegant transition-shadow">
                 <CardContent className="pt-6 space-y-4">
@@ -105,7 +98,7 @@ function StudentExams() {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="h-4 w-4 shrink-0" />
-                      <span>{formatDate(e.exam_date, lang)}</span>
+                      <span>{formatDate(e.examDate, lang)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="h-4 w-4 shrink-0" />
@@ -115,8 +108,8 @@ function StudentExams() {
                       <Users className="h-4 w-4 shrink-0" />
                       <span>
                         {lang === "mn"
-                          ? `${seatsLeft} / ${e.total_seats} суудал үлдсэн`
-                          : `${seatsLeft} / ${e.total_seats} seats remaining`}
+                          ? `${seatsLeft} / ${e.totalSeats} суудал үлдсэн`
+                          : `${seatsLeft} / ${e.totalSeats} seats remaining`}
                       </span>
                     </div>
                   </div>
@@ -131,7 +124,7 @@ function StudentExams() {
                   <div className="text-xs text-muted-foreground">
                     {lang === "mn" ? "Бүртгэл дуусах:" : "Application closes:"}{" "}
                     <span className="font-medium text-foreground">
-                      {formatDate(e.registration_end, lang)}
+                      {formatDate(e.registrationEnd, lang)}
                     </span>
                   </div>
 

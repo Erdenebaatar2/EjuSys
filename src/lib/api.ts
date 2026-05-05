@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8080";
+const API_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 const TOKEN_KEY = "jwt_token";
 
 function getToken(): string | null {
@@ -39,6 +39,24 @@ export const apiPut = <T>(path: string, body?: unknown) =>
 export const apiPatch = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined });
 export const apiDelete = <T>(path: string) => request<T>(path, { method: "DELETE" });
+
+export async function uploadFile(type: "passport" | "photo", file: File): Promise<string> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("type", type);
+  form.append("file", file);
+  const res = await fetch(`${API_URL}/api/student/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? `Upload failed: ${res.status}`);
+  }
+  const data = (await res.json()) as { path: string };
+  return data.path;
+}
 
 // Backward-compat (used by old code)
 export const api = {

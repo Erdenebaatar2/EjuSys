@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,38 +15,29 @@ export const Route = createFileRoute("/student/applications")({
 
 interface StudentApplicationSummary {
   id: string;
-  application_number: string;
+  applicationNumber: string;
   status: string;
-  payment_status: string;
-  created_at: string;
-  exam_id: string;
-  exams?: {
+  paymentStatus: string;
+  createdAt: string;
+  examId: string;
+  exam?: {
     name: string;
-    exam_date: string;
+    examDate: string;
     location: string;
   } | null;
 }
 
 function StudentApplications() {
-  const { user } = useAuth();
   const { lang } = useLang();
   const [apps, setApps] = useState<StudentApplicationSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void (async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("applications")
-        .select(
-          "id, application_number, status, payment_status, created_at, exam_id, exams(name, exam_date, location)",
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      setApps(data ?? []);
-      setLoading(false);
-    })();
-  }, [user]);
+    void apiGet<StudentApplicationSummary[]>("/api/student/applications")
+      .then((data) => setApps(data ?? []))
+      .catch(() => setApps([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading) {
     return (
@@ -70,7 +60,8 @@ function StudentApplications() {
         </div>
         <Button asChild>
           <Link to="/student/exams">
-            <Plus className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Шинэ бүртгэл" : "New application"}
+            <Plus className="mr-1.5 h-4 w-4" />{" "}
+            {lang === "mn" ? "Шинэ бүртгэл" : "New application"}
           </Link>
         </Button>
       </div>
@@ -80,7 +71,9 @@ function StudentApplications() {
           <CardContent className="py-12 text-center text-muted-foreground space-y-3">
             <p>{lang === "mn" ? "Танд бүртгэл алга" : "You have no applications yet"}</p>
             <Button asChild variant="outline" size="sm">
-              <Link to="/student/exams">{lang === "mn" ? "Шалгалт сонгох" : "Browse exams"}</Link>
+              <Link to="/student/exams">
+                {lang === "mn" ? "Шалгалт сонгох" : "Browse exams"}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -93,20 +86,21 @@ function StudentApplications() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <code className="text-xs bg-muted px-2 py-0.5 rounded">
-                        {a.application_number}
+                        {a.applicationNumber}
                       </code>
                       <StatusBadge status={a.status} />
-                      <StatusBadge status={a.payment_status} />
+                      <StatusBadge status={a.paymentStatus} />
                     </div>
-                    <h3 className="mt-2 font-semibold">{a.exams?.name}</h3>
+                    <h3 className="mt-2 font-semibold">{a.exam?.name}</h3>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {a.exams?.exam_date && formatDate(a.exams.exam_date, lang)} ·{" "}
-                      {a.exams?.location}
+                      {a.exam?.examDate && formatDate(a.exam.examDate, lang)} ·{" "}
+                      {a.exam?.location}
                     </div>
                   </div>
                   <Button asChild variant="outline" size="sm">
                     <Link to="/student/applications/$id" params={{ id: a.id }}>
-                      {lang === "mn" ? "Харах" : "View"} <ArrowRight className="ml-1.5 h-4 w-4" />
+                      {lang === "mn" ? "Харах" : "View"}{" "}
+                      <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
