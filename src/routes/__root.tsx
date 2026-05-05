@@ -2,8 +2,11 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import { LangProvider } from "@/contexts/LangContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import appCss from "../styles.css?url";
+
+const queryClient = new QueryClient();
 
 function NotFoundComponent() {
   return (
@@ -35,8 +38,7 @@ export const Route = createRootRoute({
       { title: "EJU Бүртгэлийн Систем | EJU Registration System" },
       {
         name: "description",
-        content:
-          "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем.",
+        content: "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем.",
       },
       { property: "og:title", content: "EJU Бүртгэлийн Систем" },
       { property: "og:description", content: "Япон Их Сургуулийн шалгалтад онлайнаар бүртгүүл." },
@@ -71,13 +73,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ← ЗӨВХӨН НЭГ RootComponent байх ёстой, QueryClientProvider-тэй
 function RootComponent() {
   return (
-    <LangProvider>
-      <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
-      </AuthProvider>
-    </LangProvider>
+    <QueryClientProvider client={queryClient}>
+      <LangProvider>
+        <AuthProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+      </LangProvider>
+    </QueryClientProvider>
   );
 }

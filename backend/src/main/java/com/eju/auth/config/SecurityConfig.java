@@ -1,7 +1,7 @@
 package com.eju.auth.config;
 
-import com.eju.auth.auth.JwtService;
-import com.eju.auth.user.UserRepository;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,7 +16,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
+import com.eju.auth.auth.JwtService;
+import com.eju.auth.user.UserRepository;
 
 @Configuration
 public class SecurityConfig {
@@ -34,7 +35,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "http://localhost:5000"));
+        config.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:5000"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -54,6 +59,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/register", "/api/auth/login", "/api/health").permitAll()
                 .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/student/**").hasAuthority("ROLE_STUDENT")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
