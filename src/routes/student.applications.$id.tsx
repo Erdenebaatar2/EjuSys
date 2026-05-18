@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,61 +16,42 @@ export const Route = createFileRoute("/student/applications/$id")({
 
 interface SelectedSubject {
   code: string;
-  name_mn: string;
-  name_ja: string;
-  category: "general" | "japanese" | "math" | "science";
+  nameMn: string;
+  nameJa: string;
+  category: string;
 }
 
 interface ApplicationDetailRecord {
-  application_number: string;
+  applicationNumber: string;
   status: string;
-  payment_status: string;
-  rejection_reason?: string | null;
+  paymentStatus: string;
+  rejectionReason?: string | null;
   phone?: string | null;
   address?: string | null;
-  target_university?: string | null;
-  created_at: string;
-  exams: {
+  targetUniversity?: string | null;
+  createdAt: string;
+  exam: {
     name: string;
-    exam_date: string;
+    examDate: string;
     location: string;
     session: "first" | "second";
     year: number;
   };
+  subjects: SelectedSubject[];
 }
 
 function AppDetail() {
   const { id } = Route.useParams();
-  const { user } = useAuth();
   const { lang } = useLang();
   const [app, setApp] = useState<ApplicationDetailRecord | null>(null);
-  const [subjects, setSubjects] = useState<SelectedSubject[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void (async () => {
-      if (!user) return;
-      const [appRes, subRes] = await Promise.all([
-        supabase
-          .from("applications")
-          .select("*, exams(name, exam_date, location, session, year)")
-          .eq("id", id)
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("application_subjects")
-          .select("subjects(code, name_mn, name_ja, category)")
-          .eq("application_id", id),
-      ]);
-      setApp(appRes.data);
-      setSubjects(
-        (subRes.data ?? [])
-          .map((r) => r.subjects)
-          .filter((subject): subject is SelectedSubject => Boolean(subject)),
-      );
-      setLoading(false);
-    })();
-  }, [id, user]);
+    void apiGet<ApplicationDetailRecord>(`/api/student/applications/${id}`)
+      .then((data) => setApp(data))
+      .catch(() => setApp(null))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   if (loading) {
     return (
@@ -108,21 +88,23 @@ function AppDetail() {
         <CardHeader>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <code className="text-xs bg-muted px-2 py-0.5 rounded">{app.application_number}</code>
-              <CardTitle className="mt-2 text-2xl">{app.exams?.name}</CardTitle>
+              <code className="text-xs bg-muted px-2 py-0.5 rounded">{app.applicationNumber}</code>
+              <CardTitle className="mt-2 text-2xl">{app.exam?.name}</CardTitle>
             </div>
             <div className="flex gap-2">
               <StatusBadge status={app.status} />
-              <StatusBadge status={app.payment_status} />
+              <StatusBadge status={app.paymentStatus} />
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          {app.status === "rejected" && app.rejection_reason && (
+          {app.status === "rejected" && app.rejectionReason && (
             <Alert variant="destructive">
               <AlertDescription>
-                <strong>{lang === "mn" ? "Татгалзсан шалтгаан:" : "Reason for rejection:"}</strong>{" "}
-                {app.rejection_reason}
+                <strong>
+                  {lang === "mn" ? "Татгалзсан шалтгаан:" : "Reason for rejection:"}
+                </strong>{" "}
+                {app.rejectionReason}
               </AlertDescription>
             </Alert>
           )}
@@ -140,24 +122,28 @@ function AppDetail() {
             <Field
               icon={Calendar}
               label={lang === "mn" ? "Шалгалтын өдөр" : "Exam date"}
-              value={formatDate(app.exams.exam_date, lang)}
+              value={formatDate(app.exam.examDate, lang)}
             />
             <Field
               icon={MapPin}
               label={lang === "mn" ? "Байршил" : "Location"}
-              value={app.exams.location}
+              value={app.exam.location}
             />
-            <Field icon={Phone} label={lang === "mn" ? "Утас" : "Phone"} value={app.phone || "—"} />
+            <Field
+              icon={Phone}
+              label={lang === "mn" ? "Утас" : "Phone"}
+              value={app.phone || "—"}
+            />
             <Field
               icon={Home}
               label={lang === "mn" ? "Хаяг" : "Address"}
               value={app.address || "—"}
             />
-            {app.target_university && (
+            {app.targetUniversity && (
               <Field
                 icon={GraduationCap}
                 label={lang === "mn" ? "Очих их сургууль" : "Target university"}
-                value={app.target_university}
+                value={app.targetUniversity}
               />
             )}
           </div>
@@ -167,21 +153,23 @@ function AppDetail() {
               {lang === "mn" ? "Сонгосон хичээл" : "Selected subjects"}
             </div>
             <div className="flex flex-wrap gap-2">
-              {subjects.map((s, i) => (
+              {app.subjects.map((s, i) => (
                 <span
                   key={i}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs"
                 >
                   <code className="text-muted-foreground">{s.code}</code>
-                  <span>{lang === "mn" ? s.name_mn : subjectLabel(s.code, lang)}</span>
+                  <span>{lang === "mn" ? s.nameMn : subjectLabel(s.code, lang)}</span>
                 </span>
               ))}
-              {subjects.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+              {app.subjects.length === 0 && (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
             </div>
           </div>
 
           <div className="text-xs text-muted-foreground border-t border-border pt-3">
-            {lang === "mn" ? "Илгээсэн:" : "Submitted:"} {formatDate(app.created_at, lang)}
+            {lang === "mn" ? "Илгээсэн:" : "Submitted:"} {formatDate(app.createdAt, lang)}
           </div>
         </CardContent>
       </Card>

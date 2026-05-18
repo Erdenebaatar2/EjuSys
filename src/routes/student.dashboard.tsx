@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,54 +11,35 @@ export const Route = createFileRoute("/student/dashboard")({
   component: StudentDashboard,
 });
 
+interface DashboardData {
+  firstName: string;
+  totalApps: number;
+  pendingApps: number;
+  approvedApps: number;
+  openExams: number;
+}
+
 function StudentDashboard() {
-  const { user } = useAuth();
   const { lang } = useLang();
-  const [stats, setStats] = useState({ apps: 0, openExams: 0, pending: 0 });
-  const [firstName, setFirstName] = useState("");
+  const [data, setData] = useState<DashboardData>({
+    firstName: "",
+    totalApps: 0,
+    pendingApps: 0,
+    approvedApps: 0,
+    openExams: 0,
+  });
 
   useEffect(() => {
-    void (async () => {
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (profile) setFirstName(profile.first_name);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const [apps, openExams, pending] = await Promise.all([
-        supabase
-          .from("applications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id),
-        supabase
-          .from("exams")
-          .select("id", { count: "exact", head: true })
-          .eq("is_active", true)
-          .gte("registration_end", today),
-        supabase
-          .from("applications")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("status", "pending"),
-      ]);
-      setStats({
-        apps: apps.count ?? 0,
-        openExams: openExams.count ?? 0,
-        pending: pending.count ?? 0,
-      });
-    })();
-  }, [user]);
+    void apiGet<DashboardData>("/api/student/dashboard").then(setData).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-8 max-w-6xl">
       <div>
         <h1 className="text-3xl font-bold">
           {lang === "mn"
-            ? `Сайн байна уу, ${firstName || "оюутан"}!`
-            : `Hello, ${firstName || "student"}!`}
+            ? `Сайн байна уу, ${data.firstName || "оюутан"}!`
+            : `Hello, ${data.firstName || "student"}!`}
         </h1>
         <p className="mt-1 text-muted-foreground text-bilingual-ja">
           {lang === "mn"
@@ -72,17 +52,17 @@ function StudentDashboard() {
         <StatCard
           icon={BookOpen}
           label={lang === "mn" ? "Нээлттэй шалгалт" : "Open exams"}
-          value={stats.openExams}
+          value={data.openExams}
         />
         <StatCard
           icon={FileText}
           label={lang === "mn" ? "Миний бүртгэл" : "My applications"}
-          value={stats.apps}
+          value={data.totalApps}
         />
         <StatCard
           icon={Clock}
           label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
-          value={stats.pending}
+          value={data.pendingApps}
         />
       </div>
 

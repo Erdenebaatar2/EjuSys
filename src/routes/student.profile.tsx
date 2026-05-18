@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet, apiPut } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,57 +14,63 @@ export const Route = createFileRoute("/student/profile")({
   component: ProfilePage,
 });
 
+interface ProfileData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  passportNumber: string;
+  phone: string;
+  address: string;
+}
+
 function ProfilePage() {
-  const { user } = useAuth();
   const { lang } = useLang();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     address: "",
     email: "",
-    passport_number: "",
+    passportNumber: "",
   });
 
   useEffect(() => {
-    void (async () => {
-      if (!user) return;
-      const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      if (data) {
-        setForm({
-          first_name: data.first_name ?? "",
-          last_name: data.last_name ?? "",
-          phone: data.phone ?? "",
-          address: data.address ?? "",
-          email: data.email ?? "",
-          passport_number: data.passport_number ?? "",
-        });
-      }
-      setLoading(false);
-    })();
-  }, [user]);
+    void apiGet<ProfileData>("/api/student/profile")
+      .then((data) => {
+        if (data) {
+          setForm({
+            firstName: data.firstName ?? "",
+            lastName: data.lastName ?? "",
+            phone: data.phone ?? "",
+            address: data.address ?? "",
+            email: data.email ?? "",
+            passportNumber: data.passportNumber ?? "",
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        first_name: form.first_name,
-        last_name: form.last_name,
+    try {
+      await apiPut("/api/student/profile", {
+        firstName: form.firstName,
+        lastName: form.lastName,
         phone: form.phone || null,
         address: form.address || null,
-      })
-      .eq("id", user.id);
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+      });
+      toast.success(lang === "mn" ? "Хадгалагдлаа" : "Saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error");
+    } finally {
+      setSaving(false);
     }
-    toast.success(lang === "mn" ? "Хадгалагдлаа" : "Saved");
   }
 
   if (loading) {
@@ -89,16 +94,16 @@ function ProfilePage() {
               <div className="space-y-1.5">
                 <Label>{lang === "mn" ? "Овог" : "Last name"}</Label>
                 <Input
-                  value={form.last_name}
-                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-1.5">
                 <Label>{lang === "mn" ? "Нэр" : "First name"}</Label>
                 <Input
-                  value={form.first_name}
-                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                   required
                 />
               </div>
@@ -109,7 +114,7 @@ function ProfilePage() {
             </div>
             <div className="space-y-1.5">
               <Label>{lang === "mn" ? "Паспорт дугаар" : "Passport number"}</Label>
-              <Input value={form.passport_number} disabled />
+              <Input value={form.passportNumber} disabled />
             </div>
             <div className="space-y-1.5">
               <Label>{lang === "mn" ? "Утас" : "Phone"}</Label>

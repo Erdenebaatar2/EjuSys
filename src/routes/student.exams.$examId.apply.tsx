@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet, apiPost, uploadFile } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,8 +21,8 @@ export const Route = createFileRoute("/student/exams/$examId/apply")({
 interface Subject {
   id: string;
   code: string;
-  name_mn: string;
-  name_ja: string;
+  nameMn: string;
+  nameJa: string;
   category: string;
 }
 
@@ -33,13 +32,12 @@ interface ApplyExamRecord {
 }
 
 interface ProfileContactRecord {
-  phone: string | null;
-  address: string | null;
+  phone: string;
+  address: string;
 }
 
 function ApplyPage() {
   const { examId } = Route.useParams();
-  const { user } = useAuth();
   const { lang } = useLang();
   const navigate = useNavigate();
 
@@ -57,22 +55,20 @@ function ApplyPage() {
 
   useEffect(() => {
     void (async () => {
-      const [examRes, subjRes, profRes] = await Promise.all([
-        supabase.from("exams").select("*").eq("id", examId).maybeSingle(),
-        supabase.from("subjects").select("*").order("category"),
-        user
-          ? supabase.from("profiles").select("phone, address").eq("id", user.id).maybeSingle()
-          : Promise.resolve<{ data: ProfileContactRecord | null }>({ data: null }),
+      const [examData, subjectsData, profileData] = await Promise.allSettled([
+        apiGet<ApplyExamRecord>(`/api/student/exams/${examId}`),
+        apiGet<Subject[]>("/api/student/subjects"),
+        apiGet<ProfileContactRecord>("/api/student/profile"),
       ]);
-      setExam(examRes.data);
-      setSubjects((subjRes.data ?? []) as Subject[]);
-      if (profRes.data) {
-        setPhone(profRes.data.phone ?? "");
-        setAddress(profRes.data.address ?? "");
+      if (examData.status === "fulfilled") setExam(examData.value);
+      if (subjectsData.status === "fulfilled") setSubjects(subjectsData.value ?? []);
+      if (profileData.status === "fulfilled" && profileData.value) {
+        setPhone(profileData.value.phone ?? "");
+        setAddress(profileData.value.address ?? "");
       }
       setLoading(false);
     })();
-  }, [examId, user]);
+  }, [examId]);
 
   function toggle(id: string) {
     const next = new Set(selected);
@@ -96,27 +92,12 @@ function ApplyPage() {
     else setPhotoFile(f);
   }
 
-  async function uploadToBucket(
-    bucket: string,
-    file: File,
-    prefix: string,
-  ): Promise<string | null> {
-    if (!user) return null;
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/${prefix}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: false });
-    if (error) {
-      toast.error(error.message);
-      return null;
-    }
-    return path;
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user || !exam) return;
+    if (!exam) return;
 
-    const codes = subjects.filter((s) => selected.has(s.id)).map((s) => s.code as SubjectCode);
+    const selectedSubjects = subjects.filter((s) => selected.has(s.id));
+    const codes = selectedSubjects.map((s) => s.code as SubjectCode);
     const v = validateSubjectCombination(codes);
     if (!v.valid) {
       toast.error(lang === "mn" ? v.messageMn : v.messageJa);
@@ -133,57 +114,36 @@ function ApplyPage() {
     }
 
     setSubmitting(true);
+    try {
+      const [passportPath, photoPath] = await Promise.all([
+        uploadFile("passport", passportFile),
+        uploadFile("photo", photoFile),
+      ]);
 
-    const passportPath = await uploadToBucket("eju-documents", passportFile, "passport");
-    if (!passportPath) {
+      const app = await apiPost<{ id: string; applicationNumber: string }>(
+        "/api/student/applications",
+        {
+          examId,
+          phone: phone || null,
+          address: address || null,
+          targetUniversity: targetUniversity || null,
+          passportScanPath: passportPath,
+          photoPath: photoPath,
+          subjectIds: Array.from(selected),
+        },
+      );
+
+      toast.success(
+        lang === "mn"
+          ? `Бүртгэл амжилттай! ${app.applicationNumber}`
+          : `Application submitted! ${app.applicationNumber}`,
+      );
+      void navigate({ to: "/student/applications/$id", params: { id: app.id } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Алдаа");
+    } finally {
       setSubmitting(false);
-      return;
     }
-    const photoPath = await uploadToBucket("eju-photos", photoFile, "photo");
-    if (!photoPath) {
-      setSubmitting(false);
-      return;
-    }
-
-    const { data: app, error } = await supabase
-      .from("applications")
-      .insert({
-        application_number: "",
-        user_id: user.id,
-        exam_id: examId,
-        phone: phone || null,
-        address: address || null,
-        target_university: targetUniversity || null,
-        passport_scan_path: passportPath,
-        photo_path: photoPath,
-      })
-      .select("id, application_number")
-      .single();
-
-    if (error || !app) {
-      setSubmitting(false);
-      toast.error(error?.message ?? "Алдаа");
-      return;
-    }
-
-    const rows = Array.from(selected).map((subject_id) => ({
-      application_id: app.id,
-      subject_id,
-    }));
-    const { error: subErr } = await supabase.from("application_subjects").insert(rows);
-    if (subErr) {
-      setSubmitting(false);
-      toast.error(subErr.message);
-      return;
-    }
-
-    setSubmitting(false);
-    toast.success(
-      lang === "mn"
-        ? `Бүртгэл амжилттай! ${app.application_number}`
-        : `Application submitted! ${app.application_number}`,
-    );
-    void navigate({ to: "/student/applications/$id", params: { id: app.id } });
   }
 
   if (loading) {
@@ -257,10 +217,10 @@ function ApplyPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium leading-tight">
-                          {lang === "mn" ? s.name_mn : subjectLabel(s.code, lang)}
+                          {lang === "mn" ? s.nameMn : subjectLabel(s.code, lang)}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {s.code} · {lang === "mn" ? subjectLabel(s.code, "en") : s.name_mn}
+                          {s.code} · {lang === "mn" ? subjectLabel(s.code, "en") : s.nameMn}
                         </div>
                       </div>
                     </label>
@@ -288,7 +248,9 @@ function ApplyPage() {
             </div>
             <div className="space-y-1.5">
               <Label>
-                {lang === "mn" ? "Очих их сургууль (заавал биш)" : "Target university (optional)"}
+                {lang === "mn"
+                  ? "Очих их сургууль (заавал биш)"
+                  : "Target university (optional)"}
               </Label>
               <Input
                 value={targetUniversity}

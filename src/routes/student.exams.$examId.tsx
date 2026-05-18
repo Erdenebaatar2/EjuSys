@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,53 +13,41 @@ export const Route = createFileRoute("/student/exams/$examId")({
   component: ExamDetail,
 });
 
+interface ExistingApplication {
+  id: string;
+  applicationNumber: string;
+  status: string;
+}
+
 interface ExamDetailRecord {
   id: string;
   name: string;
-  exam_date: string;
+  examDate: string;
   location: string;
-  registration_start: string;
-  registration_end: string;
-  available_seats: number;
-  total_seats: number;
+  registrationStart: string;
+  registrationEnd: string;
+  availableSeats: number;
+  totalSeats: number;
   session: "first" | "second";
   year: number;
   description?: string | null;
-}
-
-interface ExistingApplication {
-  id: string;
-  application_number: string;
-  status: string;
+  existingApplication?: ExistingApplication | null;
 }
 
 function ExamDetail() {
   const { examId } = Route.useParams();
-  const { user } = useAuth();
   const { lang } = useLang();
   const navigate = useNavigate();
 
   const [exam, setExam] = useState<ExamDetailRecord | null>(null);
-  const [existingApp, setExistingApp] = useState<ExistingApplication | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void (async () => {
-      const { data: e } = await supabase.from("exams").select("*").eq("id", examId).maybeSingle();
-      setExam(e);
-
-      if (user) {
-        const { data: app } = await supabase
-          .from("applications")
-          .select("id, application_number, status")
-          .eq("user_id", user.id)
-          .eq("exam_id", examId)
-          .maybeSingle();
-        setExistingApp(app);
-      }
-      setLoading(false);
-    })();
-  }, [examId, user]);
+    void apiGet<ExamDetailRecord>(`/api/student/exams/${examId}`)
+      .then((data) => setExam(data))
+      .catch(() => setExam(null))
+      .finally(() => setLoading(false));
+  }, [examId]);
 
   if (loading) {
     return (
@@ -85,8 +72,8 @@ function ExamDetail() {
     );
   }
 
-  const open = isRegistrationOpen(exam.registration_start, exam.registration_end);
-  const canApply = open && exam.available_seats > 0 && !existingApp;
+  const open = isRegistrationOpen(exam.registrationStart, exam.registrationEnd);
+  const canApply = open && exam.availableSeats > 0 && !exam.existingApplication;
 
   return (
     <div className="max-w-3xl">
@@ -108,7 +95,7 @@ function ExamDetail() {
             <Field
               icon={Calendar}
               label={lang === "mn" ? "Шалгалтын өдөр" : "Exam date"}
-              value={formatDate(exam.exam_date, lang)}
+              value={formatDate(exam.examDate, lang)}
             />
             <Field
               icon={MapPin}
@@ -118,17 +105,17 @@ function ExamDetail() {
             <Field
               icon={Calendar}
               label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration opens"}
-              value={formatDate(exam.registration_start, lang)}
+              value={formatDate(exam.registrationStart, lang)}
             />
             <Field
               icon={Calendar}
               label={lang === "mn" ? "Бүртгэл дуусах" : "Registration closes"}
-              value={formatDate(exam.registration_end, lang)}
+              value={formatDate(exam.registrationEnd, lang)}
             />
             <Field
               icon={Users}
               label={lang === "mn" ? "Үлдсэн суудал" : "Seats left"}
-              value={`${exam.available_seats} / ${exam.total_seats}`}
+              value={`${exam.availableSeats} / ${exam.totalSeats}`}
             />
           </div>
 
@@ -138,15 +125,18 @@ function ExamDetail() {
             </div>
           )}
 
-          {existingApp ? (
+          {exam.existingApplication ? (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
                 {lang === "mn"
-                  ? `Та энэ шалгалтад аль хэдийн бүртгүүлсэн (${existingApp.application_number}).`
-                  : `You have already applied for this exam (${existingApp.application_number}).`}
+                  ? `Та энэ шалгалтад аль хэдийн бүртгүүлсэн (${exam.existingApplication.applicationNumber}).`
+                  : `You have already applied for this exam (${exam.existingApplication.applicationNumber}).`}
                 <Button asChild variant="link" size="sm" className="px-2 h-auto">
-                  <Link to="/student/applications/$id" params={{ id: existingApp.id }}>
+                  <Link
+                    to="/student/applications/$id"
+                    params={{ id: exam.existingApplication.id }}
+                  >
                     {lang === "mn" ? "Харах" : "View"}
                   </Link>
                 </Button>
@@ -160,7 +150,7 @@ function ExamDetail() {
                   : "The registration period has ended."}
               </AlertDescription>
             </Alert>
-          ) : exam.available_seats <= 0 ? (
+          ) : exam.availableSeats <= 0 ? (
             <Alert variant="destructive">
               <AlertDescription>
                 {lang === "mn" ? "Суудал дууссан" : "No seats remain for this exam."}

@@ -16,6 +16,8 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByUserId(UUID userId);
 
+    java.util.Optional<Application> findByUserIdAndExamId(UUID userId, UUID examId);
+
     @Query("""
         select a from Application a
         where (:status is null or a.status = :status)

@@ -56,6 +56,8 @@ export function RegisterForm() {
           password: v.password,
           firstName: v.first_name,
           lastName: v.last_name,
+          passportNumber: v.passport_number,
+          phone: v.phone || null,
         }),
       });
       if (!res.ok) {
