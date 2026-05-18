@@ -40,6 +40,23 @@ export const apiPatch = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined });
 export const apiDelete = <T>(path: string) => request<T>(path, { method: "DELETE" });
 
+export async function uploadPhoto(file: File): Promise<string> {
+  const token = getToken();
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_URL}/api/student/upload/photo`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? `Upload failed: ${res.status}`);
+  }
+  const data = (await res.json()) as { path: string };
+  return data.path;
+}
+
 export async function uploadFile(type: "passport" | "photo", file: File): Promise<string> {
   const token = getToken();
   const form = new FormData();
@@ -61,12 +78,15 @@ export async function uploadFile(type: "passport" | "photo", file: File): Promis
 // Backward-compat (used by old code)
 export const api = {
   login: (email: string, password: string) =>
-    apiPost<{ token: string; id: string; email: string; firstName: string; lastName: string; roles: string[] }>(
-      "/api/auth/login",
-      { email, password },
-    ),
+    apiPost<{
+      token: string;
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      roles: string[];
+    }>("/api/auth/login", { email, password }),
   register: (data: { email: string; password: string; firstName: string; lastName: string }) =>
     apiPost("/api/auth/register", data),
-  authFetch: (url: string, options: RequestInit = {}) =>
-    request(url, options),
+  authFetch: (url: string, options: RequestInit = {}) => request(url, options),
 };

@@ -33,8 +33,8 @@ function StudentApplications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void apiGet<StudentApplicationSummary[]>("/api/student/applications")
-      .then((data) => setApps(data ?? []))
+    void apiGet<StudentApplicationSummary | undefined>("/api/student/application")
+      .then((data) => setApps(data ? [data] : []))
       .catch(() => setApps([]))
       .finally(() => setLoading(false));
   }, []);
@@ -59,9 +59,8 @@ function StudentApplications() {
           </p>
         </div>
         <Button asChild>
-          <Link to="/student/exams">
-            <Plus className="mr-1.5 h-4 w-4" />{" "}
-            {lang === "mn" ? "Шинэ бүртгэл" : "New application"}
+          <Link to="/student/application">
+            <Plus className="mr-1.5 h-4 w-4" /> {lang === "mn" ? "Шинэ бүртгэл" : "New application"}
           </Link>
         </Button>
       </div>
@@ -71,9 +70,7 @@ function StudentApplications() {
           <CardContent className="py-12 text-center text-muted-foreground space-y-3">
             <p>{lang === "mn" ? "Танд бүртгэл алга" : "You have no applications yet"}</p>
             <Button asChild variant="outline" size="sm">
-              <Link to="/student/exams">
-                {lang === "mn" ? "Шалгалт сонгох" : "Browse exams"}
-              </Link>
+              <Link to="/student/application">{lang === "mn" ? "Маягт бөглөх" : "Open form"}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -93,14 +90,12 @@ function StudentApplications() {
                     </div>
                     <h3 className="mt-2 font-semibold">{a.exam?.name}</h3>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {a.exam?.examDate && formatDate(a.exam.examDate, lang)} ·{" "}
-                      {a.exam?.location}
+                      {a.exam?.examDate && formatDate(a.exam.examDate, lang)} · {a.exam?.location}
                     </div>
                   </div>
                   <Button asChild variant="outline" size="sm">
-                    <Link to="/student/applications/$id" params={{ id: a.id }}>
-                      {lang === "mn" ? "Харах" : "View"}{" "}
-                      <ArrowRight className="ml-1.5 h-4 w-4" />
+                    <Link to="/student/application">
+                      {lang === "mn" ? "Харах" : "View"} <ArrowRight className="ml-1.5 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>

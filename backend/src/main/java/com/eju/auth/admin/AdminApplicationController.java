@@ -12,6 +12,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,14 +40,30 @@ public class AdminApplicationController {
     @GetMapping
     public Map<String, Object> list(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String paymentStatus,
             @RequestParam(required = false) UUID examId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         Application.Status st = (status == null || status.isBlank())
                 ? null : Application.Status.valueOf(status.toUpperCase());
-        Page<Application> result = appRepo.search(st, examId,
+        Application.PaymentStatus ps = (paymentStatus == null || paymentStatus.isBlank())
+                ? null : Application.PaymentStatus.valueOf(paymentStatus.toUpperCase());
+        Instant from = fromDate == null ? null : fromDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant to = toDate == null ? null : toDate.plusDays(1).atStartOfDay().minusNanos(1).toInstant(ZoneOffset.UTC);
+        UUID searchUuid = null;
+        try {
+            if (search != null && !search.isBlank()) {
+                searchUuid = UUID.fromString(search.trim());
+            }
+        } catch (Exception ignored) {
+            searchUuid = null;
+        }
+
+        Page<Application> result = appRepo.search(st, ps, examId, from, to, searchUuid,
                 (search == null || search.isBlank()) ? null : search,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
 
@@ -121,6 +140,28 @@ public class AdminApplicationController {
         m.put("rejectionReason", a.getRejectionReason());
         m.put("passportScanPath", a.getPassportScanPath());
         m.put("photoPath", a.getPhotoPath());
+        m.put("photoUrl", a.getPhotoUrl());
+        m.put("nameAlphabet", a.getNameAlphabet());
+        m.put("nameKanji", a.getNameKanji());
+        m.put("sex", a.getSex() == null ? null : a.getSex().name().toLowerCase());
+        m.put("dateOfBirth", a.getDateOfBirth());
+        m.put("nationality", a.getNationality());
+        m.put("countryCode", a.getCountryCode());
+        m.put("postalCode", a.getPostalCode());
+        m.put("addressCode", a.getAddressCode());
+        m.put("telephone", a.getTelephone());
+        m.put("mobilePhone", a.getMobilePhone());
+        m.put("schoolOrOccupation", a.getSchoolOrOccupation());
+        m.put("subjectJapanese", a.isSubjectJapanese());
+        m.put("subjectScience", a.isSubjectScience());
+        m.put("subjectJapanAndWorld", a.isSubjectJapanAndWorld());
+        m.put("subjectMathematics", a.isSubjectMathematics());
+        m.put("scienceOption1", a.getScienceOption1() == null ? null : a.getScienceOption1().name());
+        m.put("scienceOption2", a.getScienceOption2() == null ? null : a.getScienceOption2().name());
+        m.put("mathCourse", a.getMathCourse() == null ? null : a.getMathCourse().name());
+        m.put("examLanguage", a.getExamLanguage() == null ? null : a.getExamLanguage().name());
+        m.put("jassoScholarshipApply", a.isJassoScholarshipApply());
+        m.put("examSite", a.getExamSite() == null ? null : a.getExamSite().name());
         m.put("createdAt", a.getCreatedAt());
         m.put("userId", a.getUserId());
         m.put("examId", a.getExamId());

@@ -1,36 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,15 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/exams")({
-  head: () => ({ meta: [{ title: "Админ — Шалгалтууд | EJU" }] }),
-  component: AdminExams,
+  head: () => ({ meta: [{ title: "Admin exam settings | EjuSys" }] }),
+  component: AdminExamPage,
 });
 
-interface ExamRow {
+interface ExamRecord {
   id: string;
   name: string;
   year: number;
@@ -65,46 +39,28 @@ interface ExamRow {
   active: boolean;
 }
 
-interface ExamFormState {
-  name: string;
-  year: string;
-  session: "FIRST" | "SECOND";
-  examDate: string;
-  location: string;
-  totalSeats: string;
-  registrationStart: string;
-  registrationEnd: string;
-  description: string;
-  isActive: boolean;
-}
-
-const emptyForm: ExamFormState = {
-  name: "",
-  year: String(new Date().getFullYear()),
-  session: "FIRST",
-  examDate: "",
-  location: "",
-  totalSeats: "100",
-  registrationStart: "",
-  registrationEnd: "",
-  description: "",
-  isActive: true,
-};
-
-function AdminExams() {
+function AdminExamPage() {
   const { lang } = useLang();
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<ExamRow | null>(null);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<ExamFormState>(emptyForm);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin", "exams"],
-    queryFn: () => apiGet<ExamRow[]>("/api/admin/exams"),
+  const [form, setForm] = useState({
+    name: "",
+    year: String(new Date().getFullYear()),
+    session: "FIRST" as "FIRST" | "SECOND",
+    examDate: "",
+    location: "",
+    totalSeats: "100",
+    registrationStart: "",
+    registrationEnd: "",
+    description: "",
+    isActive: true,
   });
 
-  const saveMut = useMutation({
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "exam"],
+    queryFn: () => apiGet<ExamRecord | undefined>("/api/admin/exam"),
+  });
+
+  const upsertMut = useMutation({
     mutationFn: async () => {
       const payload = {
         name: form.name,
@@ -118,234 +74,157 @@ function AdminExams() {
         description: form.description || null,
         isActive: form.isActive,
       };
-      return editing
-        ? apiPut<ExamRow>(`/api/admin/exams/${editing.id}`, payload)
-        : apiPost<ExamRow>("/api/admin/exams", payload);
+      if (data?.id) return apiPatch<ExamRecord>("/api/admin/exam", payload);
+      return apiPost<ExamRecord>("/api/admin/exam", payload);
     },
     onSuccess: () => {
-      toast.success(lang === "mn" ? "Хадгалагдлаа" : "Saved");
-      setOpen(false);
-      setEditing(null);
-      void qc.invalidateQueries({ queryKey: ["admin", "exams"] });
+      toast.success(lang === "mn" ? "Шалгалтын мэдээлэл хадгалагдлаа" : "Exam saved");
+      void qc.invalidateQueries({ queryKey: ["admin", "exam"] });
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => apiDelete(`/api/admin/exams/${id}`),
+  const deactivateMut = useMutation({
+    mutationFn: () => apiDelete("/api/admin/exam"),
     onSuccess: () => {
-      toast.success(lang === "mn" ? "Устгалаа" : "Deleted");
-      setDeleteId(null);
-      void qc.invalidateQueries({ queryKey: ["admin", "exams"] });
+      toast.success(lang === "mn" ? "Шалгалт идэвхгүй боллоо" : "Exam deactivated");
+      void qc.invalidateQueries({ queryKey: ["admin", "exam"] });
     },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed"),
   });
 
-  function openNew() {
-    setEditing(null);
-    setForm(emptyForm);
-    setOpen(true);
-  }
-  function openEdit(e: ExamRow) {
-    setEditing(e);
+  useEffect(() => {
+    if (!data) return;
     setForm({
-      name: e.name,
-      year: String(e.year),
-      session: e.session,
-      examDate: e.examDate,
-      location: e.location,
-      totalSeats: String(e.totalSeats),
-      registrationStart: e.registrationStart,
-      registrationEnd: e.registrationEnd,
-      description: e.description ?? "",
-      isActive: e.active,
+      name: data.name,
+      year: String(data.year),
+      session: data.session,
+      examDate: data.examDate,
+      location: data.location,
+      totalSeats: String(data.totalSeats),
+      registrationStart: data.registrationStart,
+      registrationEnd: data.registrationEnd,
+      description: data.description ?? "",
+      isActive: data.active,
     });
-    setOpen(true);
+  }, [data]);
+
+  if (isLoading) {
+    return (
+      <div className="py-16 text-center">
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{lang === "mn" ? "Шалгалт удирдах" : "Exam management"}</h1>
-        <Button onClick={openNew}>
-          <Plus className="h-4 w-4 mr-1" />
-          {lang === "mn" ? "Шинэ шалгалт" : "New exam"}
-        </Button>
-      </div>
-
+    <div className="space-y-6 max-w-4xl">
+      <h1 className="text-3xl font-bold">
+        {lang === "mn" ? "Шалгалтын тохиргоо" : "Exam settings"}
+      </h1>
       <Card className="shadow-card">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="py-12 text-center">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{lang === "mn" ? "Нэр" : "Name"}</TableHead>
-                  <TableHead>{lang === "mn" ? "Огноо" : "Date"}</TableHead>
-                  <TableHead>{lang === "mn" ? "Байршил" : "Location"}</TableHead>
-                  <TableHead>{lang === "mn" ? "Суудал" : "Seats"}</TableHead>
-                  <TableHead>{lang === "mn" ? "Төлөв" : "Status"}</TableHead>
-                  <TableHead className="text-right">{lang === "mn" ? "Үйлдэл" : "Actions"}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data ?? []).map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-medium">
-                      {e.name}
-                      <div className="text-xs text-muted-foreground">
-                        {e.year} · {e.session === "FIRST" ? "1" : "2"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{e.examDate}</TableCell>
-                    <TableCell>{e.location}</TableCell>
-                    <TableCell>
-                      {e.availableSeats}/{e.totalSeats}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={e.active ? "default" : "outline"}>
-                        {e.active ? (lang === "mn" ? "Идэвхтэй" : "Active") : lang === "mn" ? "Идэвхгүй" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(e)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(e.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(data ?? []).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                      {lang === "mn" ? "Шалгалт алга" : "No exams"}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editing
-                ? lang === "mn"
-                  ? "Шалгалт засах"
-                  : "Edit exam"
-                : lang === "mn"
-                  ? "Шинэ шалгалт"
-                  : "New exam"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <Label>{lang === "mn" ? "Нэр" : "Name"}</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Он" : "Year"}</Label>
-              <Input type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Улирал" : "Session"}</Label>
-              <Select
-                value={form.session}
-                onValueChange={(v) => setForm({ ...form, session: v as "FIRST" | "SECOND" })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FIRST">{lang === "mn" ? "1-р улирал" : "Session 1"}</SelectItem>
-                  <SelectItem value="SECOND">{lang === "mn" ? "2-р улирал" : "Session 2"}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Шалгалтын огноо" : "Exam date"}</Label>
-              <Input type="date" value={form.examDate} onChange={(e) => setForm({ ...form, examDate: e.target.value })} />
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Нийт суудал" : "Total seats"}</Label>
-              <Input
-                type="number"
-                value={form.totalSeats}
-                onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>{lang === "mn" ? "Байршил" : "Location"}</Label>
-              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Бүртгэл эхлэх" : "Reg. start"}</Label>
-              <Input
-                type="date"
-                value={form.registrationStart}
-                onChange={(e) => setForm({ ...form, registrationStart: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>{lang === "mn" ? "Бүртгэл дуусах" : "Reg. end"}</Label>
-              <Input
-                type="date"
-                value={form.registrationEnd}
-                onChange={(e) => setForm({ ...form, registrationEnd: e.target.value })}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>{lang === "mn" ? "Тайлбар" : "Description"}</Label>
+        <CardContent className="pt-6 grid gap-4 md:grid-cols-2">
+          <Field label={lang === "mn" ? "Шалгалтын нэр" : "Exam name"}>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label={lang === "mn" ? "Он" : "Year"}>
+            <Input
+              type="number"
+              value={form.year}
+              onChange={(e) => setForm({ ...form, year: e.target.value })}
+            />
+          </Field>
+          <Field label={lang === "mn" ? "Session" : "Session"}>
+            <Select
+              value={form.session}
+              onValueChange={(v) => setForm({ ...form, session: v as "FIRST" | "SECOND" })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FIRST">First</SelectItem>
+                <SelectItem value="SECOND">Second</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}>
+            <Input
+              type="date"
+              value={form.examDate}
+              onChange={(e) => setForm({ ...form, examDate: e.target.value })}
+            />
+          </Field>
+          <Field label={lang === "mn" ? "Байршил" : "Location"}>
+            <Input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
+          </Field>
+          <Field label={lang === "mn" ? "Нийт суудал" : "Total seats"}>
+            <Input
+              type="number"
+              value={form.totalSeats}
+              onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
+            />
+          </Field>
+          <Field label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration start"}>
+            <Input
+              type="date"
+              value={form.registrationStart}
+              onChange={(e) => setForm({ ...form, registrationStart: e.target.value })}
+            />
+          </Field>
+          <Field label={lang === "mn" ? "Бүртгэл дуусах" : "Registration end"}>
+            <Input
+              type="date"
+              value={form.registrationEnd}
+              onChange={(e) => setForm({ ...form, registrationEnd: e.target.value })}
+            />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label={lang === "mn" ? "Тайлбар" : "Description"}>
               <Textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
-            </div>
-            <div className="flex items-center gap-2 sm:col-span-2">
-              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
-              <Label>{lang === "mn" ? "Идэвхтэй" : "Active"}</Label>
-            </div>
+            </Field>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              {lang === "mn" ? "Болих" : "Cancel"}
+          <div className="md:col-span-2 flex items-center gap-2">
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
+            />
+            <Label>{lang === "mn" ? "Идэвхтэй" : "Active"}</Label>
+          </div>
+          <div className="md:col-span-2 flex gap-3">
+            <Button onClick={() => upsertMut.mutate()} disabled={upsertMut.isPending}>
+              {upsertMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {data ? (lang === "mn" ? "Шинэчлэх" : "Update") : lang === "mn" ? "Үүсгэх" : "Create"}
             </Button>
-            <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
-              {saveMut.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              {lang === "mn" ? "Хадгалах" : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {data && (
+              <Button
+                variant="outline"
+                onClick={() => deactivateMut.mutate()}
+                disabled={deactivateMut.isPending}
+              >
+                {deactivateMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {lang === "mn" ? "Идэвхгүй болгох" : "Deactivate"}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{lang === "mn" ? "Устгах уу?" : "Delete exam?"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {lang === "mn" ? "Энэ үйлдлийг буцаах боломжгүй." : "This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{lang === "mn" ? "Болих" : "Cancel"}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && deleteMut.mutate(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {lang === "mn" ? "Устгах" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
     </div>
   );
 }

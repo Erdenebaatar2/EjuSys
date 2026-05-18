@@ -20,18 +20,38 @@ public class FileUploadController {
     private static final long MAX_DOCUMENT_SIZE = 5 * 1024 * 1024L;
     private static final long MAX_PHOTO_SIZE = 2 * 1024 * 1024L;
 
+    @PostMapping("/photo")
+    public ResponseEntity<?> uploadPhoto(@RequestParam("file") MultipartFile file,
+                                         Authentication auth) throws IOException {
+        return uploadByType("photo", file, auth);
+    }
+
     @PostMapping
     public ResponseEntity<?> upload(@RequestParam("type") String type,
                                     @RequestParam("file") MultipartFile file,
                                     Authentication auth) throws IOException {
-        UUID userId = (UUID) auth.getPrincipal();
+        return uploadByType(type, file, auth);
+    }
 
-        long maxSize = "passport".equals(type) ? MAX_DOCUMENT_SIZE : MAX_PHOTO_SIZE;
+    private ResponseEntity<?> uploadByType(String type, MultipartFile file, Authentication auth) throws IOException {
+        UUID userId = (UUID) auth.getPrincipal();
+        String normalizedType = type == null ? "" : type.trim().toLowerCase();
+
+        long maxSize = "passport".equals(normalizedType) ? MAX_DOCUMENT_SIZE : MAX_PHOTO_SIZE;
         if (file.getSize() > maxSize) {
             return ResponseEntity.badRequest().body(Map.of("message", "File too large"));
         }
 
-        String dir = "passport".equals(type) ? "documents" : "photos";
+        if ("photo".equals(normalizedType) || "passport".equals(normalizedType)) {
+            String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+            if ("photo".equals(normalizedType) && !("image/jpeg".equals(contentType) || "image/png".equals(contentType))) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Photo must be JPG or PNG"));
+            }
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid upload type"));
+        }
+
+        String dir = "passport".equals(normalizedType) ? "documents" : "photos";
         Path folder = Paths.get("uploads", dir, userId.toString());
         Files.createDirectories(folder);
 
@@ -40,7 +60,7 @@ public class FileUploadController {
         int dot = originalName.lastIndexOf('.');
         if (dot >= 0) ext = originalName.substring(dot);
 
-        String filename = type + "-" + System.currentTimeMillis() + ext;
+        String filename = normalizedType + "-" + System.currentTimeMillis() + ext;
         Path dest = folder.resolve(filename);
         file.transferTo(dest);
 

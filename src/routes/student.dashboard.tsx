@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BookOpen, FileText, Clock } from "lucide-react";
+import { ArrowRight, CalendarDays, ClipboardCheck, FileText, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/student/dashboard")({
-  head: () => ({ meta: [{ title: "Хяналтын самбар | EJU" }] }),
+  head: () => ({ meta: [{ title: "Student dashboard | EjuSys" }] }),
   component: StudentDashboard,
 });
 
@@ -17,21 +17,35 @@ interface DashboardData {
   pendingApps: number;
   approvedApps: number;
   openExams: number;
+  hasApplication: boolean;
+  applicationStatus?: string | null;
+  applicationNumber?: string | null;
+  activeExam?: {
+    id: string;
+    name: string;
+    year: number;
+    session: string;
+    examDate: string;
+    registrationStart: string;
+    registrationEnd: string;
+    location: string;
+  };
 }
 
 function StudentDashboard() {
   const { lang } = useLang();
-  const [data, setData] = useState<DashboardData>({
-    firstName: "",
-    totalApps: 0,
-    pendingApps: 0,
-    approvedApps: 0,
-    openExams: 0,
+  const { data, isLoading } = useQuery({
+    queryKey: ["student", "dashboard"],
+    queryFn: () => apiGet<DashboardData>("/api/student/dashboard"),
   });
 
-  useEffect(() => {
-    void apiGet<DashboardData>("/api/student/dashboard").then(setData).catch(() => {});
-  }, []);
+  if (isLoading || !data) {
+    return (
+      <div className="py-16 text-center">
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -41,26 +55,21 @@ function StudentDashboard() {
             ? `Сайн байна уу, ${data.firstName || "оюутан"}!`
             : `Hello, ${data.firstName || "student"}!`}
         </h1>
-        <p className="mt-1 text-muted-foreground text-bilingual-ja">
-          {lang === "mn"
-            ? "EJU бүртгэлийн системд тавтай морил"
-            : "Welcome to the EJU registration system"}
-        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          icon={BookOpen}
-          label={lang === "mn" ? "Нээлттэй шалгалт" : "Open exams"}
+          icon={CalendarDays}
+          label={lang === "mn" ? "Нээлттэй шалгалт" : "Open exam"}
           value={data.openExams}
         />
         <StatCard
           icon={FileText}
-          label={lang === "mn" ? "Миний бүртгэл" : "My applications"}
+          label={lang === "mn" ? "Нийт бүртгэл" : "Applications"}
           value={data.totalApps}
         />
         <StatCard
-          icon={Clock}
+          icon={ClipboardCheck}
           label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
           value={data.pendingApps}
         />
@@ -68,20 +77,37 @@ function StudentDashboard() {
 
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>{lang === "mn" ? "Дараагийн алхам" : "Next step"}</CardTitle>
+          <CardTitle>
+            {lang === "mn" ? "Идэвхтэй EJU бүртгэл" : "Active EJU registration"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            {lang === "mn"
-              ? "Нээлттэй шалгалтыг үзэж, өөрт тохирохыг сонгож бүртгүүлээрэй."
-              : "Review the open exams and submit an application that fits you."}
-          </p>
-          <Button asChild>
-            <Link to="/student/exams">
-              {lang === "mn" ? "Шалгалт харах" : "View exams"}
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
+          {data.activeExam ? (
+            <>
+              <div className="text-sm text-muted-foreground">
+                {data.activeExam.name} · {data.activeExam.year} · {data.activeExam.session}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {data.activeExam.registrationStart} — {data.activeExam.registrationEnd}
+              </div>
+              {data.hasApplication ? (
+                <p className="text-sm">
+                  {data.applicationNumber} ·{" "}
+                  <span className="uppercase">{data.applicationStatus}</span>
+                </p>
+              ) : null}
+              <Button asChild>
+                <Link to="/student/application">
+                  {lang === "mn" ? "Бүртгэлийн маягт нээх" : "Open application form"}
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn" ? "Одоогоор идэвхтэй шалгалт алга." : "No active exam currently."}
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

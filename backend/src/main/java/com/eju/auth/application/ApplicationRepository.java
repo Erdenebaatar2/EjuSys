@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
@@ -16,17 +18,50 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByUserId(UUID userId);
 
+    Optional<Application> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    List<Application> findByExamId(UUID examId);
+
     java.util.Optional<Application> findByUserIdAndExamId(UUID userId, UUID examId);
 
     @Query("""
         select a from Application a
         where (:status is null or a.status = :status)
+          and (:paymentStatus is null or a.paymentStatus = :paymentStatus)
           and (:examId is null or a.examId = :examId)
-          and (:search is null or lower(a.applicationNumber) like lower(concat('%', :search, '%')))
+          and (:fromDate is null or a.createdAt >= :fromDate)
+          and (:toDate is null or a.createdAt <= :toDate)
+          and (
+            :search is null
+            or lower(a.applicationNumber) like lower(concat('%', :search, '%'))
+            or (:searchUuid is not null and (a.id = :searchUuid or a.userId = :searchUuid or a.examId = :searchUuid))
+            or exists (
+              select 1 from Profile p
+              where p.id = a.userId
+                and (
+                  lower(p.firstName) like lower(concat('%', :search, '%'))
+                  or lower(p.lastName) like lower(concat('%', :search, '%'))
+                  or lower(p.email) like lower(concat('%', :search, '%'))
+                  or lower(p.passportNumber) like lower(concat('%', :search, '%'))
+                )
+            )
+            or exists (
+              select 1 from Exam e
+              where e.id = a.examId
+                and (
+                  lower(e.name) like lower(concat('%', :search, '%'))
+                  or lower(e.location) like lower(concat('%', :search, '%'))
+                )
+            )
+          )
         order by a.createdAt desc
     """)
     Page<Application> search(@Param("status") Application.Status status,
+                             @Param("paymentStatus") Application.PaymentStatus paymentStatus,
                              @Param("examId") UUID examId,
+                             @Param("fromDate") Instant fromDate,
+                             @Param("toDate") Instant toDate,
+                             @Param("searchUuid") UUID searchUuid,
                              @Param("search") String search,
                              Pageable pageable);
 }

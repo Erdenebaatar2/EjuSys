@@ -52,6 +52,13 @@ interface ApplicationRow {
   rejectionReason?: string | null;
   passportScanPath?: string | null;
   photoPath?: string | null;
+  photoUrl?: string | null;
+  subjectJapanese?: boolean;
+  subjectScience?: boolean;
+  subjectJapanAndWorld?: boolean;
+  subjectMathematics?: boolean;
+  scienceOption1?: string | null;
+  mathCourse?: string | null;
   createdAt: string;
   profile?: {
     firstName: string;
@@ -80,17 +87,40 @@ function AdminApplications() {
   const { lang } = useLang();
   const qc = useQueryClient();
   const [status, setStatus] = useState<string>("all");
+  const [paymentStatus, setPaymentStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [examId, setExamId] = useState<string>("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<ApplicationRow | null>(null);
   const [rejectFor, setRejectFor] = useState<ApplicationRow | null>(null);
   const [reason, setReason] = useState("");
 
+  const { data: activeExam } = useQuery({
+    queryKey: ["admin", "exam", "for-filter"],
+    queryFn: () => apiGet<{ id: string; name: string } | undefined>("/api/admin/exam"),
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "applications", status, search, page],
+    queryKey: [
+      "admin",
+      "applications",
+      status,
+      paymentStatus,
+      examId,
+      fromDate,
+      toDate,
+      search,
+      page,
+    ],
     queryFn: () => {
       const params = new URLSearchParams();
       if (status !== "all") params.set("status", status);
+      if (paymentStatus !== "all") params.set("paymentStatus", paymentStatus);
+      if (examId !== "all") params.set("examId", examId);
+      if (fromDate) params.set("fromDate", fromDate);
+      if (toDate) params.set("toDate", toDate);
       if (search) params.set("search", search);
       params.set("page", String(page));
       params.set("size", "20");
@@ -131,7 +161,9 @@ function AdminApplications() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <h1 className="text-3xl font-bold">{lang === "mn" ? "Бүртгэл удирдах" : "Application management"}</h1>
+      <h1 className="text-3xl font-bold">
+        {lang === "mn" ? "Бүртгэл удирдах" : "Application management"}
+      </h1>
 
       <Card className="shadow-card">
         <CardContent className="p-4 flex flex-wrap gap-3 items-end">
@@ -160,11 +192,64 @@ function AdminApplications() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
-                <SelectItem value="pending">{lang === "mn" ? "Хүлээгдэж буй" : "Pending"}</SelectItem>
-                <SelectItem value="approved">{lang === "mn" ? "Зөвшөөрсөн" : "Approved"}</SelectItem>
-                <SelectItem value="rejected">{lang === "mn" ? "Татгалзсан" : "Rejected"}</SelectItem>
+                <SelectItem value="pending">
+                  {lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
+                </SelectItem>
+                <SelectItem value="approved">
+                  {lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
+                </SelectItem>
+                <SelectItem value="rejected">
+                  {lang === "mn" ? "Татгалзсан" : "Rejected"}
+                </SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="w-48">
+            <Label>{lang === "mn" ? "Төлбөр" : "Payment"}</Label>
+            <Select
+              value={paymentStatus}
+              onValueChange={(v) => {
+                setPaymentStatus(v);
+                setPage(0);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
+                <SelectItem value="paid">{lang === "mn" ? "Төлсөн" : "Paid"}</SelectItem>
+                <SelectItem value="unpaid">{lang === "mn" ? "Төлөөгүй" : "Unpaid"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-56">
+            <Label>{lang === "mn" ? "Шалгалт" : "Exam"}</Label>
+            <Select
+              value={examId}
+              onValueChange={(v) => {
+                setExamId(v);
+                setPage(0);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
+                {activeExam?.id ? (
+                  <SelectItem value={activeExam.id}>{activeExam.name}</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-44">
+            <Label>{lang === "mn" ? "Эхлэх огноо" : "From date"}</Label>
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </div>
+          <div className="w-44">
+            <Label>{lang === "mn" ? "Дуусах огноо" : "To date"}</Label>
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -184,7 +269,9 @@ function AdminApplications() {
                   <TableHead>{lang === "mn" ? "Шалгалт" : "Exam"}</TableHead>
                   <TableHead>{lang === "mn" ? "Төлөв" : "Status"}</TableHead>
                   <TableHead>{lang === "mn" ? "Төлбөр" : "Payment"}</TableHead>
-                  <TableHead className="text-right">{lang === "mn" ? "Үйлдэл" : "Actions"}</TableHead>
+                  <TableHead className="text-right">
+                    {lang === "mn" ? "Үйлдэл" : "Actions"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,13 +292,17 @@ function AdminApplications() {
                     <TableCell>
                       <Select
                         value={a.paymentStatus}
-                        onValueChange={(v) => paymentMut.mutate({ id: a.id, status: v as "paid" | "unpaid" })}
+                        onValueChange={(v) =>
+                          paymentMut.mutate({ id: a.id, status: v as "paid" | "unpaid" })
+                        }
                       >
                         <SelectTrigger className="h-8 w-28">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="unpaid">{lang === "mn" ? "Төлөөгүй" : "Unpaid"}</SelectItem>
+                          <SelectItem value="unpaid">
+                            {lang === "mn" ? "Төлөөгүй" : "Unpaid"}
+                          </SelectItem>
                           <SelectItem value="paid">{lang === "mn" ? "Төлсөн" : "Paid"}</SelectItem>
                         </SelectContent>
                       </Select>
@@ -257,7 +348,12 @@ function AdminApplications() {
             {lang === "mn" ? "Нийт" : "Total"}: {data.total}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
               {lang === "mn" ? "Өмнөх" : "Prev"}
             </Button>
             <Button
@@ -286,14 +382,44 @@ function AdminApplications() {
               <Field label={lang === "mn" ? "Шалгалт" : "Exam"} value={detail.exam?.name} />
               <Field label={lang === "mn" ? "Огноо" : "Date"} value={detail.exam?.examDate} />
               <Field label={lang === "mn" ? "Байршил" : "Location"} value={detail.exam?.location} />
-              <Field label={lang === "mn" ? "Паспорт" : "Passport"} value={detail.profile?.passportNumber} />
-              <Field label={lang === "mn" ? "Утас" : "Phone"} value={detail.phone ?? detail.profile?.phone} />
+              <Field
+                label={lang === "mn" ? "Паспорт" : "Passport"}
+                value={detail.profile?.passportNumber}
+              />
+              <Field
+                label={lang === "mn" ? "Утас" : "Phone"}
+                value={detail.phone ?? detail.profile?.phone}
+              />
               <Field label={lang === "mn" ? "Хаяг" : "Address"} value={detail.address} />
-              <Field label={lang === "mn" ? "Зорилтот сургууль" : "Target university"} value={detail.targetUniversity} />
+              <Field
+                label={lang === "mn" ? "Зорилтот сургууль" : "Target university"}
+                value={detail.targetUniversity}
+              />
               <Field label={lang === "mn" ? "Төлөв" : "Status"} value={detail.status} />
+              <Field
+                label={lang === "mn" ? "Зураг" : "Photo"}
+                value={detail.photoUrl ?? detail.photoPath}
+              />
+              <Field
+                label={lang === "mn" ? "Паспорт файл" : "Passport file"}
+                value={detail.passportScanPath}
+              />
+              <Field
+                label={lang === "mn" ? "Сонгосон хичээлүүд" : "Selected subjects"}
+                value={[
+                  detail.subjectJapanese ? "Japanese" : "",
+                  detail.subjectScience ? `Science ${detail.scienceOption1 ?? ""}` : "",
+                  detail.subjectJapanAndWorld ? "General" : "",
+                  detail.subjectMathematics ? `Math ${detail.mathCourse ?? ""}` : "",
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              />
               {detail.rejectionReason && (
                 <div className="sm:col-span-2">
-                  <div className="text-xs text-muted-foreground">{lang === "mn" ? "Татгалзсан шалтгаан" : "Reject reason"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "mn" ? "Татгалзсан шалтгаан" : "Reject reason"}
+                  </div>
                   <Badge variant="outline" className="mt-1">
                     {detail.rejectionReason}
                   </Badge>

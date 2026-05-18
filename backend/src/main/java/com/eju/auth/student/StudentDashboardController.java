@@ -34,26 +34,40 @@ public class StudentDashboardController {
     public Map<String, Object> dashboard(Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
 
+        LocalDate today = LocalDate.now();
+        var activeExamOpt = examRepo.findFirstByActiveTrue()
+                .filter(e -> !e.getRegistrationEnd().isBefore(today));
+
         List<Application> apps = appRepo.findByUserId(userId);
         long totalApps = apps.size();
         long pendingApps = apps.stream().filter(a -> a.getStatus() == Application.Status.PENDING).count();
         long approvedApps = apps.stream().filter(a -> a.getStatus() == Application.Status.APPROVED).count();
-
-        LocalDate today = LocalDate.now();
-        long openExams = examRepo.findAll().stream()
-                .filter(e -> e.isActive() && !e.getRegistrationEnd().isBefore(today))
-                .count();
+        var latestApp = appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).orElse(null);
 
         String firstName = profileRepo.findById(userId)
                 .map(p -> p.getFirstName())
                 .orElse("");
 
-        return Map.of(
-                "firstName", firstName,
-                "totalApps", totalApps,
-                "pendingApps", pendingApps,
-                "approvedApps", approvedApps,
-                "openExams", openExams
-        );
+        var response = new java.util.LinkedHashMap<String, Object>();
+        response.put("firstName", firstName);
+        response.put("totalApps", totalApps);
+        response.put("pendingApps", pendingApps);
+        response.put("approvedApps", approvedApps);
+        response.put("openExams", activeExamOpt.isPresent() ? 1 : 0);
+        response.put("hasApplication", latestApp != null);
+        response.put("applicationStatus", latestApp == null ? null : latestApp.getStatus().name().toLowerCase());
+        response.put("applicationNumber", latestApp == null ? null : latestApp.getApplicationNumber());
+
+        activeExamOpt.ifPresent(exam -> response.put("activeExam", Map.of(
+                "id", exam.getId(),
+                "name", exam.getName(),
+                "year", exam.getYear(),
+                "session", exam.getSession().name().toLowerCase(),
+                "examDate", exam.getExamDate(),
+                "registrationStart", exam.getRegistrationStart(),
+                "registrationEnd", exam.getRegistrationEnd(),
+                "location", exam.getLocation()
+        )));
+        return response;
     }
 }

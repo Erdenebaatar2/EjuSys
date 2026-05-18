@@ -18,17 +18,15 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
-import { Route as StudentExamsRouteImport } from './routes/student.exams'
 import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
 import { Route as StudentApplicationsRouteImport } from './routes/student.applications'
+import { Route as StudentApplicationRouteImport } from './routes/student.application'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStatsRouteImport } from './routes/admin.stats'
 import { Route as AdminExamsRouteImport } from './routes/admin.exams'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
-import { Route as StudentExamsExamIdRouteImport } from './routes/student.exams.$examId'
 import { Route as StudentApplicationsIdRouteImport } from './routes/student.applications.$id'
-import { Route as StudentExamsExamIdApplyRouteImport } from './routes/student.exams.$examId.apply'
 
 const StudentRoute = StudentRouteImport.update({
   id: '/student',
@@ -75,11 +73,6 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
-const StudentExamsRoute = StudentExamsRouteImport.update({
-  id: '/exams',
-  path: '/exams',
-  getParentRoute: () => StudentRoute,
-} as any)
 const StudentDashboardRoute = StudentDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -88,6 +81,11 @@ const StudentDashboardRoute = StudentDashboardRouteImport.update({
 const StudentApplicationsRoute = StudentApplicationsRouteImport.update({
   id: '/applications',
   path: '/applications',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentApplicationRoute = StudentApplicationRouteImport.update({
+  id: '/application',
+  path: '/application',
   getParentRoute: () => StudentRoute,
 } as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
@@ -115,20 +113,10 @@ const AdminApplicationsRoute = AdminApplicationsRouteImport.update({
   path: '/applications',
   getParentRoute: () => AdminRoute,
 } as any)
-const StudentExamsExamIdRoute = StudentExamsExamIdRouteImport.update({
-  id: '/$examId',
-  path: '/$examId',
-  getParentRoute: () => StudentExamsRoute,
-} as any)
 const StudentApplicationsIdRoute = StudentApplicationsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => StudentApplicationsRoute,
-} as any)
-const StudentExamsExamIdApplyRoute = StudentExamsExamIdApplyRouteImport.update({
-  id: '/apply',
-  path: '/apply',
-  getParentRoute: () => StudentExamsExamIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -145,13 +133,11 @@ export interface FileRoutesByFullPath {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
-  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
-  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -167,13 +153,11 @@ export interface FileRoutesByTo {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
-  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
-  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -190,13 +174,11 @@ export interface FileRoutesById {
   '/admin/exams': typeof AdminExamsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
-  '/student/exams': typeof StudentExamsRouteWithChildren
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
-  '/student/exams/$examId': typeof StudentExamsExamIdRouteWithChildren
-  '/student/exams/$examId/apply': typeof StudentExamsExamIdApplyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -214,13 +196,11 @@ export interface FileRouteTypes {
     | '/admin/exams'
     | '/admin/stats'
     | '/admin/students'
+    | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
-    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
-    | '/student/exams/$examId'
-    | '/student/exams/$examId/apply'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -236,13 +216,11 @@ export interface FileRouteTypes {
     | '/admin/exams'
     | '/admin/stats'
     | '/admin/students'
+    | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
-    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
-    | '/student/exams/$examId'
-    | '/student/exams/$examId/apply'
   id:
     | '__root__'
     | '/'
@@ -258,13 +236,11 @@ export interface FileRouteTypes {
     | '/admin/exams'
     | '/admin/stats'
     | '/admin/students'
+    | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
-    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
-    | '/student/exams/$examId'
-    | '/student/exams/$examId/apply'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -343,13 +319,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentProfileRouteImport
       parentRoute: typeof StudentRoute
     }
-    '/student/exams': {
-      id: '/student/exams'
-      path: '/exams'
-      fullPath: '/student/exams'
-      preLoaderRoute: typeof StudentExamsRouteImport
-      parentRoute: typeof StudentRoute
-    }
     '/student/dashboard': {
       id: '/student/dashboard'
       path: '/dashboard'
@@ -362,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/applications'
       fullPath: '/student/applications'
       preLoaderRoute: typeof StudentApplicationsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/application': {
+      id: '/student/application'
+      path: '/application'
+      fullPath: '/student/application'
+      preLoaderRoute: typeof StudentApplicationRouteImport
       parentRoute: typeof StudentRoute
     }
     '/admin/students': {
@@ -399,26 +375,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminApplicationsRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/student/exams/$examId': {
-      id: '/student/exams/$examId'
-      path: '/$examId'
-      fullPath: '/student/exams/$examId'
-      preLoaderRoute: typeof StudentExamsExamIdRouteImport
-      parentRoute: typeof StudentExamsRoute
-    }
     '/student/applications/$id': {
       id: '/student/applications/$id'
       path: '/$id'
       fullPath: '/student/applications/$id'
       preLoaderRoute: typeof StudentApplicationsIdRouteImport
       parentRoute: typeof StudentApplicationsRoute
-    }
-    '/student/exams/$examId/apply': {
-      id: '/student/exams/$examId/apply'
-      path: '/apply'
-      fullPath: '/student/exams/$examId/apply'
-      preLoaderRoute: typeof StudentExamsExamIdApplyRouteImport
-      parentRoute: typeof StudentExamsExamIdRoute
     }
   }
 }
@@ -452,40 +414,17 @@ const StudentApplicationsRouteChildren: StudentApplicationsRouteChildren = {
 const StudentApplicationsRouteWithChildren =
   StudentApplicationsRoute._addFileChildren(StudentApplicationsRouteChildren)
 
-interface StudentExamsExamIdRouteChildren {
-  StudentExamsExamIdApplyRoute: typeof StudentExamsExamIdApplyRoute
-}
-
-const StudentExamsExamIdRouteChildren: StudentExamsExamIdRouteChildren = {
-  StudentExamsExamIdApplyRoute: StudentExamsExamIdApplyRoute,
-}
-
-const StudentExamsExamIdRouteWithChildren =
-  StudentExamsExamIdRoute._addFileChildren(StudentExamsExamIdRouteChildren)
-
-interface StudentExamsRouteChildren {
-  StudentExamsExamIdRoute: typeof StudentExamsExamIdRouteWithChildren
-}
-
-const StudentExamsRouteChildren: StudentExamsRouteChildren = {
-  StudentExamsExamIdRoute: StudentExamsExamIdRouteWithChildren,
-}
-
-const StudentExamsRouteWithChildren = StudentExamsRoute._addFileChildren(
-  StudentExamsRouteChildren,
-)
-
 interface StudentRouteChildren {
+  StudentApplicationRoute: typeof StudentApplicationRoute
   StudentApplicationsRoute: typeof StudentApplicationsRouteWithChildren
   StudentDashboardRoute: typeof StudentDashboardRoute
-  StudentExamsRoute: typeof StudentExamsRouteWithChildren
   StudentProfileRoute: typeof StudentProfileRoute
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
+  StudentApplicationRoute: StudentApplicationRoute,
   StudentApplicationsRoute: StudentApplicationsRouteWithChildren,
   StudentDashboardRoute: StudentDashboardRoute,
-  StudentExamsRoute: StudentExamsRouteWithChildren,
   StudentProfileRoute: StudentProfileRoute,
 }
 

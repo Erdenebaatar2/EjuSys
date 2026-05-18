@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/student/exams")
+@RequestMapping("/api/student/exam")
 public class StudentExamController {
 
     private final ExamRepository examRepo;
@@ -23,22 +23,14 @@ public class StudentExamController {
     }
 
     @GetMapping
-    public List<Map<String, Object>> listActiveExams() {
-        LocalDate today = LocalDate.now();
-        return examRepo.findAll().stream()
-                .filter(e -> e.isActive() && !e.getRegistrationEnd().isBefore(today))
-                .sorted(Comparator.comparing(Exam::getExamDate))
-                .map(this::toMap)
-                .toList();
-    }
-
-    @GetMapping("/{examId}")
-    public ResponseEntity<?> getExam(@PathVariable UUID examId, Authentication auth) {
+    public ResponseEntity<?> getActiveExam(Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
-        return examRepo.findById(examId)
+        LocalDate today = LocalDate.now();
+        return examRepo.findFirstByActiveTrue()
+                .filter(e -> !e.getRegistrationEnd().isBefore(today))
                 .map(e -> {
                     Map<String, Object> result = new HashMap<>(toMap(e));
-                    appRepo.findByUserIdAndExamId(userId, examId).ifPresent(a ->
+                    appRepo.findByUserIdAndExamId(userId, e.getId()).ifPresent(a ->
                             result.put("existingApplication", Map.of(
                                     "id", a.getId(),
                                     "applicationNumber", a.getApplicationNumber(),
@@ -47,7 +39,7 @@ public class StudentExamController {
                     );
                     return ResponseEntity.ok(result);
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     private Map<String, Object> toMap(Exam e) {
