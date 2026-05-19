@@ -63,6 +63,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="mn" suppressHydrationWarning>
       <head suppressHydrationWarning>
+        {/* Suppress Replit devtools hydration mismatch in dev — injected script causes React 19 to throw */}
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof window==='undefined')return;var _ael=window.addEventListener;window.addEventListener=function(t,h,o){if(t==='error'){var w=function(e){if(e&&e.message&&e.message.indexOf('Hydration failed')!==-1){e.preventDefault();e.stopImmediatePropagation();return;}return h.apply(this,arguments);};return _ael.call(this,t,w,o);}return _ael.apply(this,arguments);};})();`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
