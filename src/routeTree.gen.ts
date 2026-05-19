@@ -18,6 +18,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentExamsRouteImport } from './routes/student.exams'
 import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
 import { Route as StudentApplicationsRouteImport } from './routes/student.applications'
 import { Route as StudentApplicationRouteImport } from './routes/student.application'
@@ -72,6 +73,11 @@ const IndexRoute = IndexRouteImport.update({
 const StudentProfileRoute = StudentProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentExamsRoute = StudentExamsRouteImport.update({
+  id: '/exams',
+  path: '/exams',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentDashboardRoute = StudentDashboardRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/student/application': typeof StudentApplicationRoute
   '/student/applications': typeof StudentApplicationsRouteWithChildren
   '/student/dashboard': typeof StudentDashboardRoute
+  '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
+    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
     | '/student/payment/$id'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
+    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
     | '/student/payment/$id'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/student/application'
     | '/student/applications'
     | '/student/dashboard'
+    | '/student/exams'
     | '/student/profile'
     | '/student/applications/$id'
     | '/student/payment/$id'
@@ -329,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/student/profile'
       preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/exams': {
+      id: '/student/exams'
+      path: '/exams'
+      fullPath: '/student/exams'
+      preLoaderRoute: typeof StudentExamsRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/dashboard': {
@@ -437,6 +456,7 @@ interface StudentRouteChildren {
   StudentApplicationRoute: typeof StudentApplicationRoute
   StudentApplicationsRoute: typeof StudentApplicationsRouteWithChildren
   StudentDashboardRoute: typeof StudentDashboardRoute
+  StudentExamsRoute: typeof StudentExamsRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentPaymentIdRoute: typeof StudentPaymentIdRoute
 }
@@ -445,6 +465,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentApplicationRoute: StudentApplicationRoute,
   StudentApplicationsRoute: StudentApplicationsRouteWithChildren,
   StudentDashboardRoute: StudentDashboardRoute,
+  StudentExamsRoute: StudentExamsRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentPaymentIdRoute: StudentPaymentIdRoute,
 }

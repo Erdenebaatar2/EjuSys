@@ -9,7 +9,7 @@ import { Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/payment/$id")({
-  head: () => ({ meta: [{ title: "QPay payment | EjuSys" }] }),
+  head: () => ({ meta: [{ title: "QPay2 payment | EjuSys" }] }),
   component: PaymentPage,
 });
 
@@ -59,7 +59,7 @@ function PaymentPage() {
     onSuccess: (data) => {
       qc.setQueryData(["payment", "status", id], data);
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "QPay error"),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "QPay2 error"),
   });
 
   // create invoice on first load
@@ -143,7 +143,7 @@ function PaymentPage() {
       <div className="py-16 text-center">
         <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
-          {lang === "mn" ? "QPay invoice бэлдэж байна..." : "Creating QPay invoice..."}
+          {lang === "mn" ? "QPay2 invoice бэлдэж байна..." : "Creating QPay2 invoice..."}
         </p>
       </div>
     );
@@ -157,7 +157,7 @@ function PaymentPage() {
             <p className="text-sm text-destructive">
               {createMut.error instanceof Error
                 ? createMut.error.message
-                : "QPay invoice failed"}
+                : "QPay2 invoice failed"}
             </p>
             <Button onClick={() => createMut.mutate()} variant="outline">
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -185,7 +185,7 @@ function PaymentPage() {
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>{lang === "mn" ? "QPay invoice" : "QPay invoice"}</span>
+            <span>{lang === "mn" ? "QPay2 invoice" : "QPay2 invoice"}</span>
             <span className="text-base font-semibold">
               {data?.amount.toLocaleString()} ₮
             </span>

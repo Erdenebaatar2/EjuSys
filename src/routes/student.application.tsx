@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+<<<<<<< HEAD
 import {
   CheckCircle2,
   Loader2,
@@ -35,6 +36,9 @@ import {
   Smartphone,
   Upload,
 } from "lucide-react";
+=======
+import { CheckCircle2, CreditCard, Loader2, Upload } from "lucide-react";
+>>>>>>> 057d44990dc2b5b74d6d3d67fdfcea83c67f4b30
 
 export const Route = createFileRoute("/student/application")({
   head: () => ({ meta: [{ title: "EJU application | EjuSys" }] }),
@@ -483,8 +487,13 @@ function StudentApplicationPage() {
     () => ["ID", "VN", "TH"].includes((countryCode ?? "").toUpperCase()),
     [countryCode],
   );
+<<<<<<< HEAD
   const isReadonly =
     appQuery.data?.status === "approved" || appQuery.data?.paymentStatus === "paid";
+=======
+  const isPaid = appQuery.data?.paymentStatus === "paid";
+  const isReadonly = appQuery.data?.status === "approved" || isPaid;
+>>>>>>> 057d44990dc2b5b74d6d3d67fdfcea83c67f4b30
 
   /* ── loading ── */
   if (examQuery.isLoading || appQuery.isLoading) {
@@ -783,6 +792,7 @@ function StudentApplicationPage() {
           </Card>
         )}
 
+<<<<<<< HEAD
         {/* submit */}
         <div className="flex items-center gap-3">
           <Button
@@ -792,6 +802,54 @@ function StudentApplicationPage() {
           >
             {saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {lang === "mn" ? "Хадгалж QPay-ээр төлөх" : "Save & pay with QPay"}
+=======
+        <Card className={isPaid ? "border-success/30 bg-success/5 shadow-card" : "shadow-card"}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {isPaid ? (
+                <CheckCircle2 className="h-5 w-5 text-success" />
+              ) : (
+                <CreditCard className="h-5 w-5 text-primary" />
+              )}
+              {lang === "mn" ? "5. Төлбөр" : "5. Payment"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-md border bg-muted/30 p-4">
+              <p className="font-medium">
+                {lang === "mn" ? "Шалгалтын төлбөрийг QPay2-р төлнө." : "Pay the exam fee with QPay2."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isPaid
+                  ? lang === "mn"
+                    ? "Төлбөр төлөгдсөн. Таны бүртгэл баталгаажиж админы хяналт руу илгээгдсэн."
+                    : "Payment has been received. Your application is confirmed and waiting for admin review."
+                  : lang === "mn"
+                    ? "Маягтаа хадгалсны дараа QPay2 QR болон банкны аппын сонголтууд нээгдэнэ. Төлбөр амжилттай төлөгдсөний дараа бүртгэл баталгаажна."
+                    : "After saving the form, QPay2 QR and bank app options will open. The application is confirmed only after payment succeeds."}
+              </p>
+            </div>
+
+            {appQuery.data?.id && !isPaid && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  navigate({ to: "/student/payment/$id", params: { id: appQuery.data!.id } })
+                }
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                {lang === "mn" ? "QPay2 төлбөр рүү очих" : "Go to QPay2 payment"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <div>
+          <Button type="submit" disabled={saveMut.isPending || isReadonly}>
+            {saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {lang === "mn" ? "Хадгалаад QPay2-р төлөх" : "Save and pay with QPay2"}
+>>>>>>> 057d44990dc2b5b74d6d3d67fdfcea83c67f4b30
           </Button>
           {isReadonly && (
             <p className="text-sm text-muted-foreground">
