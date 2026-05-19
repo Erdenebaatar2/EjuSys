@@ -34,7 +34,7 @@ public class Application {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.PENDING;
+    private Status status = Status.PENDING_PAYMENT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
