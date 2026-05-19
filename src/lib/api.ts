@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const isServer = typeof window === "undefined";
+const API_URL = import.meta.env.VITE_API_BASE_URL ?? (isServer ? "http://127.0.0.1:8080" : "");
 const TOKEN_KEY = "jwt_token";
 
 function getToken(): string | null {
