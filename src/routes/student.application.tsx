@@ -20,15 +20,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  RefreshCw,
+  Smartphone,
+  Upload,
+} from "lucide-react";
 
 export const Route = createFileRoute("/student/application")({
   head: () => ({ meta: [{ title: "EJU application | EjuSys" }] }),
   component: StudentApplicationPage,
 });
 
+/* ─── schema ─────────────────────────────────────── */
 const schema = z
   .object({
     photoUrl: z.string().min(1),
@@ -104,11 +117,268 @@ type ApplicationResponse = Partial<FormValues> & {
   rejectionReason?: string | null;
 };
 
+/* ─── QPay types ──────────────────────────────────── */
+type Deeplink = { name: string; description?: string; logo?: string; link: string };
+
+type PaymentResponse = {
+  paymentId: string;
+  applicationId: string;
+  invoiceId: string | null;
+  senderInvoiceNo: string;
+  amount: number;
+  status: "NEW" | "PAID" | "FAILED";
+  qrText: string | null;
+  qrImage: string | null;
+  deeplinks: string;
+  paidAt: string | null;
+};
+
+/* ═══════════════════════════════════════════════════
+   QPay Modal — inline payment dialog
+══════════════════════════════════════════════════ */
+function QPayModal({
+  applicationId,
+  open,
+  onClose,
+  onPaid,
+}: {
+  applicationId: string;
+  open: boolean;
+  onClose: () => void;
+  onPaid: () => void;
+}) {
+  const { lang } = useLang();
+  const qc = useQueryClient();
+  const [initialized, setInitialized] = useState(false);
+
+  const createMut = useMutation({
+    mutationFn: () =>
+      apiPost<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay`),
+    onSuccess: (data) => {
+      qc.setQueryData(["payment", "qpay", applicationId], data);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "QPay алдаа"),
+  });
+
+  const data: PaymentResponse | undefined =
+    (qc.getQueryData(["payment", "qpay", applicationId]) as PaymentResponse | undefined) ??
+    createMut.data;
+
+  const isPaid = data?.status === "PAID";
+
+  /* create invoice once when dialog opens */
+  useEffect(() => {
+    if (!open || initialized) return;
+    setInitialized(true);
+    if (!data) createMut.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  /* reset on close so next open re-fetches */
+  useEffect(() => {
+    if (!open) setInitialized(false);
+  }, [open]);
+
+  /* poll every 3 s while NEW */
+  useEffect(() => {
+    if (!open || !data || isPaid) return;
+    const interval = setInterval(() => {
+      void qc
+        .fetchQuery({
+          queryKey: ["payment", "qpay", applicationId],
+          queryFn: () =>
+            apiGet<PaymentResponse>(
+              `/api/student/application/${applicationId}/payment/qpay/status`,
+            ),
+        })
+        .then((d) => {
+          if (d.status === "PAID") {
+            void qc.invalidateQueries({ queryKey: ["student", "application"] });
+            void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+            onPaid();
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [open, data, isPaid, applicationId, qc, onPaid]);
+
+  const deeplinks = useMemo<Deeplink[]>(() => {
+    if (!data?.deeplinks) return [];
+    try {
+      const parsed: unknown = JSON.parse(data.deeplinks);
+      return Array.isArray(parsed) ? (parsed as Deeplink[]) : [];
+    } catch {
+      return [];
+    }
+  }, [data?.deeplinks]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {isPaid ? (
+          /* ── SUCCESS STATE ─── */
+          <div className="py-6 text-center space-y-4">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
+              <CheckCircle2 className="h-9 w-9" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-center text-lg">
+                {lang === "mn" ? "Төлбөр амжилттай!" : "Payment successful!"}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn"
+                ? "Таны бүртгэл админы баталгаажуулалт хүлээж байна."
+                : "Your application is waiting for admin approval."}
+            </p>
+            {data?.senderInvoiceNo && (
+              <p className="text-xs text-muted-foreground font-mono">{data.senderInvoiceNo}</p>
+            )}
+            <Button className="w-full" onClick={onPaid}>
+              {lang === "mn" ? "Хаах" : "Close"}
+            </Button>
+          </div>
+        ) : createMut.isPending && !data ? (
+          /* ── CREATING INVOICE ─── */
+          <div className="py-10 text-center space-y-3">
+            <Loader2 className="mx-auto h-7 w-7 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn" ? "QPay invoice бэлдэж байна..." : "Creating QPay invoice..."}
+            </p>
+          </div>
+        ) : createMut.isError && !data ? (
+          /* ── ERROR STATE ─── */
+          <div className="py-8 text-center space-y-4">
+            <DialogHeader>
+              <DialogTitle className="text-center text-destructive">
+                {lang === "mn" ? "Алдаа гарлаа" : "Error"}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              {createMut.error instanceof Error ? createMut.error.message : "QPay error"}
+            </p>
+            <Button variant="outline" onClick={() => createMut.mutate()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {lang === "mn" ? "Дахин оролдох" : "Retry"}
+            </Button>
+          </div>
+        ) : (
+          /* ── PAYMENT UI ─── */
+          <div className="space-y-5">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-primary" />
+                  {lang === "mn" ? "QPay төлбөр" : "QPay payment"}
+                </span>
+                {data?.amount != null && (
+                  <span className="text-base font-bold text-primary">
+                    {data.amount.toLocaleString()} ₮
+                  </span>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn"
+                ? "QR кодыг банкны аппаараа уншуулж эсвэл доорх товчоор нэвтэрнэ үү."
+                : "Scan the QR with your bank app, or tap a bank button below."}
+            </p>
+
+            {/* QR code */}
+            <div className="flex justify-center">
+              {data?.qrImage ? (
+                <img
+                  src={`data:image/png;base64,${data.qrImage}`}
+                  alt="QPay QR"
+                  className="h-56 w-56 rounded-xl border bg-white p-2 shadow-sm"
+                />
+              ) : (
+                <div className="h-56 w-56 animate-pulse rounded-xl bg-muted" />
+              )}
+            </div>
+
+            {/* invoice number */}
+            {data?.senderInvoiceNo && (
+              <p className="text-center text-xs font-mono text-muted-foreground">
+                {data.senderInvoiceNo}
+              </p>
+            )}
+
+            {/* waiting indicator */}
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-2.5 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {lang === "mn"
+                ? "Төлбөр төлөгдөхийг хүлээж байна..."
+                : "Waiting for payment confirmation..."}
+            </div>
+
+            {/* deeplink bank buttons */}
+            {deeplinks.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {lang === "mn" ? "Банкны аппаар нэвтрэх" : "Open with bank app"}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {deeplinks.map((dl) => (
+                    <a
+                      key={dl.name}
+                      href={dl.link}
+                      className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card p-2 text-center text-[11px] transition-colors hover:bg-muted/50 hover:border-primary/30"
+                    >
+                      {dl.logo ? (
+                        <img src={dl.logo} alt={dl.name} className="h-9 w-9 rounded-lg" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-lg bg-muted" />
+                      )}
+                      <span className="line-clamp-2 leading-tight text-muted-foreground">
+                        {dl.description ?? dl.name}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* bottom actions */}
+            <div className="flex items-center justify-between pt-1 border-t border-border">
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                {lang === "mn" ? "Дараа төлөх" : "Pay later"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  qc.fetchQuery({
+                    queryKey: ["payment", "qpay", applicationId],
+                    queryFn: () =>
+                      apiGet<PaymentResponse>(
+                        `/api/student/application/${applicationId}/payment/qpay/status`,
+                      ),
+                  })
+                }
+              >
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                {lang === "mn" ? "Шинэчлэх" : "Refresh"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   Main application page
+══════════════════════════════════════════════════ */
 function StudentApplicationPage() {
   const { lang } = useLang();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [preview, setPreview] = useState<string>("");
+  const [qpayAppId, setQpayAppId] = useState<string | null>(null);
 
   const examQuery = useQuery({
     queryKey: ["student", "activeExam"],
@@ -200,8 +470,9 @@ function StudentApplicationPage() {
       toast.success(lang === "mn" ? "Бүртгэлийг хадгаллаа" : "Application saved");
       void qc.invalidateQueries({ queryKey: ["student", "application"] });
       void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+      /* open QPay modal if not yet paid */
       if (data?.paymentStatus !== "paid") {
-        void navigate({ to: "/student/payment/$id", params: { id: data.id } });
+        setQpayAppId(data.id);
       }
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
@@ -212,8 +483,10 @@ function StudentApplicationPage() {
     () => ["ID", "VN", "TH"].includes((countryCode ?? "").toUpperCase()),
     [countryCode],
   );
-  const isReadonly = appQuery.data?.status === "approved" || appQuery.data?.paymentStatus === "paid";
+  const isReadonly =
+    appQuery.data?.status === "approved" || appQuery.data?.paymentStatus === "paid";
 
+  /* ── loading ── */
   if (examQuery.isLoading || appQuery.isLoading) {
     return (
       <div className="py-16 text-center">
@@ -222,6 +495,7 @@ function StudentApplicationPage() {
     );
   }
 
+  /* ── no active exam ── */
   if (!examQuery.data && !appQuery.data) {
     return (
       <Card className="shadow-card">
@@ -236,6 +510,7 @@ function StudentApplicationPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* title row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">
@@ -255,6 +530,7 @@ function StudentApplicationPage() {
         )}
       </div>
 
+      {/* pending payment banner */}
       {appQuery.data?.id &&
         appQuery.data.status === "pending_payment" &&
         appQuery.data.paymentStatus !== "paid" && (
@@ -267,16 +543,15 @@ function StudentApplicationPage() {
               </p>
               <Button
                 type="button"
-                onClick={() =>
-                  navigate({ to: "/student/payment/$id", params: { id: appQuery.data!.id } })
-                }
+                onClick={() => setQpayAppId(appQuery.data!.id)}
               >
-                {lang === "mn" ? "Төлбөр төлөх" : "Pay now"}
+                {lang === "mn" ? "QPay-ээр төлөх" : "Pay with QPay"}
               </Button>
             </CardContent>
           </Card>
         )}
 
+      {/* form */}
       <form
         className="space-y-6"
         onSubmit={form.handleSubmit((values) => {
@@ -284,6 +559,7 @@ function StudentApplicationPage() {
           saveMut.mutate(values);
         })}
       >
+        {/* 1. Personal info */}
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>
@@ -302,8 +578,8 @@ function StudentApplicationPage() {
                     accept="image/jpeg,image/png"
                     className="hidden"
                     disabled={isReadonly || uploadMut.isPending}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
                       if (!file) return;
                       uploadMut.mutate(file);
                     }}
@@ -322,7 +598,7 @@ function StudentApplicationPage() {
             <Field label={lang === "mn" ? "Хүйс" : "Sex"}>
               <RadioGroup
                 value={form.watch("sex")}
-                onValueChange={(value) => form.setValue("sex", value as FormValues["sex"])}
+                onValueChange={(v) => form.setValue("sex", v as FormValues["sex"])}
                 className="flex gap-4"
               >
                 <div className="flex items-center gap-2">
@@ -341,6 +617,7 @@ function StudentApplicationPage() {
           </CardContent>
         </Card>
 
+        {/* 2. Contact */}
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>
@@ -361,7 +638,7 @@ function StudentApplicationPage() {
               <Field label={lang === "mn" ? "Шуудангийн код" : "Postal code"}>
                 <Input {...form.register("postalCode")} disabled={isReadonly} />
               </Field>
-              <Field label={lang === "mn" ? "Address code" : "Address code"}>
+              <Field label="Address code">
                 <Input {...form.register("addressCode")} disabled={isReadonly} />
               </Field>
             </div>
@@ -377,6 +654,7 @@ function StudentApplicationPage() {
           </CardContent>
         </Card>
 
+        {/* 3. Subjects */}
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>{lang === "mn" ? "3. Шалгалтын сонголт" : "3. Subject choices"}</CardTitle>
@@ -384,24 +662,22 @@ function StudentApplicationPage() {
           <CardContent className="space-y-4">
             <CheckField
               checked={Boolean(form.watch("subjectJapanese"))}
-              onCheckedChange={(value) => form.setValue("subjectJapanese", !!value)}
+              onCheckedChange={(v) => form.setValue("subjectJapanese", !!v)}
               label={lang === "mn" ? "Япон хэл" : "Japanese as a Foreign Language"}
               disabled={isReadonly}
             />
             <CheckField
               checked={Boolean(form.watch("subjectScience"))}
-              onCheckedChange={(value) => form.setValue("subjectScience", !!value)}
+              onCheckedChange={(v) => form.setValue("subjectScience", !!v)}
               label={lang === "mn" ? "Байгалийн ухаан" : "Science"}
               disabled={isReadonly}
             />
             {form.watch("subjectScience") && (
               <div className="grid gap-4 md:grid-cols-2 pl-6">
                 <SelectField
-                  label={lang === "mn" ? "Science 1" : "Science 1"}
+                  label="Science 1"
                   value={form.watch("scienceOption1")}
-                  onChange={(value) =>
-                    form.setValue("scienceOption1", value as FormValues["scienceOption1"])
-                  }
+                  onChange={(v) => form.setValue("scienceOption1", v as FormValues["scienceOption1"])}
                   options={[
                     { value: "PHYSICS", label: lang === "mn" ? "Физик" : "Physics" },
                     { value: "CHEMISTRY", label: lang === "mn" ? "Хими" : "Chemistry" },
@@ -412,9 +688,7 @@ function StudentApplicationPage() {
                 <SelectField
                   label={lang === "mn" ? "Science 2 (optional)" : "Science 2 (optional)"}
                   value={form.watch("scienceOption2")}
-                  onChange={(value) =>
-                    form.setValue("scienceOption2", value as FormValues["scienceOption2"])
-                  }
+                  onChange={(v) => form.setValue("scienceOption2", v as FormValues["scienceOption2"])}
                   options={[
                     { value: "PHYSICS", label: lang === "mn" ? "Физик" : "Physics" },
                     { value: "CHEMISTRY", label: lang === "mn" ? "Хими" : "Chemistry" },
@@ -426,13 +700,13 @@ function StudentApplicationPage() {
             )}
             <CheckField
               checked={Boolean(form.watch("subjectJapanAndWorld"))}
-              onCheckedChange={(value) => form.setValue("subjectJapanAndWorld", !!value)}
+              onCheckedChange={(v) => form.setValue("subjectJapanAndWorld", !!v)}
               label={lang === "mn" ? "Япон ба дэлхий" : "Japan and the World"}
               disabled={isReadonly}
             />
             <CheckField
               checked={Boolean(form.watch("subjectMathematics"))}
-              onCheckedChange={(value) => form.setValue("subjectMathematics", !!value)}
+              onCheckedChange={(v) => form.setValue("subjectMathematics", !!v)}
               label={lang === "mn" ? "Математик" : "Mathematics"}
               disabled={isReadonly}
             />
@@ -441,9 +715,7 @@ function StudentApplicationPage() {
                 <SelectField
                   label={lang === "mn" ? "Математикийн курс" : "Math course"}
                   value={form.watch("mathCourse")}
-                  onChange={(value) =>
-                    form.setValue("mathCourse", value as FormValues["mathCourse"])
-                  }
+                  onChange={(v) => form.setValue("mathCourse", v as FormValues["mathCourse"])}
                   options={[
                     { value: "COURSE1", label: "Course 1" },
                     { value: "COURSE2", label: "Course 2" },
@@ -455,17 +727,18 @@ function StudentApplicationPage() {
           </CardContent>
         </Card>
 
+        {/* 4. Additional */}
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>{lang === "mn" ? "4. Нэмэлт мэдээлэл" : "4. Additional options"}</CardTitle>
+            <CardTitle>
+              {lang === "mn" ? "4. Нэмэлт мэдээлэл" : "4. Additional options"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <SelectField
               label={lang === "mn" ? "Шалгалтын хэл" : "Exam language"}
               value={form.watch("examLanguage")}
-              onChange={(value) =>
-                form.setValue("examLanguage", value as FormValues["examLanguage"])
-              }
+              onChange={(v) => form.setValue("examLanguage", v as FormValues["examLanguage"])}
               options={[
                 { value: "JAPANESE", label: lang === "mn" ? "Япон" : "Japanese" },
                 { value: "ENGLISH", label: lang === "mn" ? "Англи" : "English" },
@@ -475,7 +748,7 @@ function StudentApplicationPage() {
             <div className="pt-8">
               <CheckField
                 checked={Boolean(form.watch("jassoScholarshipApply"))}
-                onCheckedChange={(value) => form.setValue("jassoScholarshipApply", !!value)}
+                onCheckedChange={(v) => form.setValue("jassoScholarshipApply", !!v)}
                 label={lang === "mn" ? "JASSO тэтгэлэгт хамрагдах" : "Apply for JASSO scholarship"}
                 disabled={isReadonly}
               />
@@ -485,7 +758,7 @@ function StudentApplicationPage() {
                 <SelectField
                   label={lang === "mn" ? "Шалгалтын байршил" : "Exam site"}
                   value={form.watch("examSite")}
-                  onChange={(value) => form.setValue("examSite", value as FormValues["examSite"])}
+                  onChange={(v) => form.setValue("examSite", v as FormValues["examSite"])}
                   options={[
                     { value: "JAKARTA", label: "Jakarta" },
                     { value: "SURABAYA", label: "Surabaya" },
@@ -501,6 +774,7 @@ function StudentApplicationPage() {
           </CardContent>
         </Card>
 
+        {/* rejection reason */}
         {appQuery.data?.rejectionReason && (
           <Card className="border-destructive/30 shadow-card">
             <CardContent className="py-4 text-sm text-destructive">
@@ -509,17 +783,41 @@ function StudentApplicationPage() {
           </Card>
         )}
 
-        <div>
-          <Button type="submit" disabled={saveMut.isPending || isReadonly}>
+        {/* submit */}
+        <div className="flex items-center gap-3">
+          <Button
+            type="submit"
+            disabled={saveMut.isPending || isReadonly}
+            className="min-w-[160px]"
+          >
             {saveMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {lang === "mn" ? "Хадгалах" : "Save application"}
+            {lang === "mn" ? "Хадгалж QPay-ээр төлөх" : "Save & pay with QPay"}
           </Button>
+          {isReadonly && (
+            <p className="text-sm text-muted-foreground">
+              {lang === "mn" ? "Бүртгэл баталгаажсан — засах боломжгүй." : "Application locked."}
+            </p>
+          )}
         </div>
       </form>
+
+      {/* QPay modal */}
+      {qpayAppId && (
+        <QPayModal
+          applicationId={qpayAppId}
+          open={!!qpayAppId}
+          onClose={() => setQpayAppId(null)}
+          onPaid={() => {
+            setQpayAppId(null);
+            void navigate({ to: "/student/dashboard" });
+          }}
+        />
+      )}
     </div>
   );
 }
 
+/* ─── small reusable field components ─────────────── */
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -536,15 +834,15 @@ function CheckField({
   disabled,
 }: {
   checked: boolean;
-  onCheckedChange: (value: boolean) => void;
+  onCheckedChange: (v: boolean) => void;
   label: string;
   disabled?: boolean;
 }) {
   return (
-    <label className="flex items-center gap-3">
+    <label className="flex items-center gap-3 cursor-pointer">
       <Checkbox
         checked={checked}
-        onCheckedChange={(value) => onCheckedChange(Boolean(value))}
+        onCheckedChange={(v) => onCheckedChange(Boolean(v))}
         disabled={disabled}
       />
       <span className="text-sm">{label}</span>
@@ -561,7 +859,7 @@ function SelectField({
 }: {
   label: string;
   value?: string;
-  onChange: (value: string) => void;
+  onChange: (v: string) => void;
   options: Array<{ value: string; label: string }>;
   disabled?: boolean;
 }) {
@@ -573,9 +871,9 @@ function SelectField({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
             </SelectItem>
           ))}
         </SelectContent>
