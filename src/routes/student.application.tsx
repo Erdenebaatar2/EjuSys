@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -97,7 +97,8 @@ type ActiveExam = {
 
 type ApplicationResponse = Partial<FormValues> & {
   id: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending_payment" | "pending" | "approved" | "rejected";
+  paymentStatus?: "unpaid" | "paid";
   applicationNumber: string;
   exam?: ActiveExam;
   rejectionReason?: string | null;
@@ -106,6 +107,7 @@ type ApplicationResponse = Partial<FormValues> & {
 function StudentApplicationPage() {
   const { lang } = useLang();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [preview, setPreview] = useState<string>("");
 
   const examQuery = useQuery({
@@ -194,10 +196,13 @@ function StudentApplicationPage() {
         return apiPatch<ApplicationResponse>("/api/student/application", payload);
       return apiPost<ApplicationResponse>("/api/student/application", payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success(lang === "mn" ? "Бүртгэлийг хадгаллаа" : "Application saved");
       void qc.invalidateQueries({ queryKey: ["student", "application"] });
       void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+      if (data?.paymentStatus !== "paid") {
+        void navigate({ to: "/student/payment/$id", params: { id: data.id } });
+      }
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
   });
@@ -207,7 +212,7 @@ function StudentApplicationPage() {
     () => ["ID", "VN", "TH"].includes((countryCode ?? "").toUpperCase()),
     [countryCode],
   );
-  const isReadonly = appQuery.data?.status === "approved";
+  const isReadonly = appQuery.data?.status === "approved" || appQuery.data?.paymentStatus === "paid";
 
   if (examQuery.isLoading || appQuery.isLoading) {
     return (
