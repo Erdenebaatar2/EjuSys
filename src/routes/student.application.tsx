@@ -255,6 +255,28 @@ function StudentApplicationPage() {
         )}
       </div>
 
+      {appQuery.data?.id &&
+        appQuery.data.status === "pending_payment" &&
+        appQuery.data.paymentStatus !== "paid" && (
+          <Card className="border-warning/40 bg-warning/5 shadow-card">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <p className="text-sm">
+                {lang === "mn"
+                  ? "Таны бүртгэл хадгалагдсан. Төлбөрөө төлснөөр админ руу илгээгдэнэ."
+                  : "Application saved. Pay the fee to submit it for admin review."}
+              </p>
+              <Button
+                type="button"
+                onClick={() =>
+                  navigate({ to: "/student/payment/$id", params: { id: appQuery.data!.id } })
+                }
+              >
+                {lang === "mn" ? "Төлбөр төлөх" : "Pay now"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
       <form
         className="space-y-6"
         onSubmit={form.handleSubmit((values) => {
