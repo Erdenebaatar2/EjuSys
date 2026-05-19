@@ -31,6 +31,7 @@ export function isRegistrationOpen(start: string, end: string): boolean {
 
 export function statusLabel(status: string, lang: Lang = "mn"): string {
   const map: Record<string, { mn: string; en: string }> = {
+    pending_payment: { mn: "Төлбөр хүлээгдэж буй", en: "Awaiting payment" },
     pending: { mn: "Хүлээгдэж буй", en: "Pending" },
     approved: { mn: "Зөвшөөрсөн", en: "Approved" },
     rejected: { mn: "Татгалзсан", en: "Rejected" },
