@@ -97,7 +97,8 @@ public class StudentApplicationController {
         if (existing.isEmpty()) return ResponseEntity.notFound().build();
 
         Application app = existing.get();
-        if (app.getStatus() != Application.Status.PENDING) {
+        Application.Status st = app.getStatus();
+        if (st != Application.Status.PENDING && st != Application.Status.PENDING_PAYMENT) {
             return ResponseEntity.badRequest().body(Map.of("message", "Only pending applications can be updated"));
         }
 

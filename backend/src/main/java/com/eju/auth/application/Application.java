@@ -10,7 +10,7 @@ import java.util.UUID;
 @Table(name = "applications")
 public class Application {
 
-    public enum Status { PENDING, APPROVED, REJECTED }
+    public enum Status { PENDING_PAYMENT, PENDING, APPROVED, REJECTED }
     public enum PaymentStatus { UNPAID, PAID }
     public enum Sex { MALE, FEMALE }
     public enum ScienceOption { PHYSICS, CHEMISTRY, BIOLOGY }
@@ -34,7 +34,7 @@ public class Application {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.PENDING;
+    private Status status = Status.PENDING_PAYMENT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
