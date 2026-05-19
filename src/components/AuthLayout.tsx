@@ -46,9 +46,7 @@ export function AuthLayout({ children, title, subtitle, side }: AuthLayoutProps)
           <div className="w-full max-w-md">
             <div className="rounded-3xl border border-white/50 bg-white/70 p-8 shadow-[var(--shadow-card)] backdrop-blur-2xl">
               <div className="mb-6">
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-                  {title}
-                </h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
                 <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
               </div>
               {children}

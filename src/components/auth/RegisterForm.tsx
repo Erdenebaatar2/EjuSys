@@ -108,11 +108,7 @@ export function RegisterForm() {
 
         <div className="space-y-1.5">
           <Label htmlFor="passport_number">{t("passportNumber")}</Label>
-          <Input
-            id="passport_number"
-            className={inputCls}
-            {...register("passport_number")}
-          />
+          <Input id="passport_number" className={inputCls} {...register("passport_number")} />
           {errors.passport_number && (
             <p className="text-xs text-destructive">{errors.passport_number.message}</p>
           )}
@@ -126,35 +122,21 @@ export function RegisterForm() {
         <div className="space-y-1.5">
           <Label htmlFor="email">{t("email")}</Label>
           <Input id="email" type="email" className={inputCls} {...register("email")} />
-          {errors.email && (
-            <p className="text-xs text-destructive">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="password">{t("password")}</Label>
-            <Input
-              id="password"
-              type="password"
-              className={inputCls}
-              {...register("password")}
-            />
+            <Input id="password" type="password" className={inputCls} {...register("password")} />
             {errors.password && (
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirm">{t("confirmPassword")}</Label>
-            <Input
-              id="confirm"
-              type="password"
-              className={inputCls}
-              {...register("confirm")}
-            />
-            {errors.confirm && (
-              <p className="text-xs text-destructive">{errors.confirm.message}</p>
-            )}
+            <Input id="confirm" type="password" className={inputCls} {...register("confirm")} />
+            {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
           </div>
         </div>
 

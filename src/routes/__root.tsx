@@ -38,7 +38,8 @@ export const Route = createRootRoute({
       { title: "EJU Бүртгэлийн Систем | EJU Registration System" },
       {
         name: "description",
-        content: "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем.",
+        content:
+          "EJU (Examination for Japanese University Admission) шалгалтад цахимаар бүртгүүлэх систем.",
       },
       { property: "og:title", content: "EJU Бүртгэлийн Систем" },
       { property: "og:description", content: "Япон Их Сургуулийн шалгалтад онлайнаар бүртгүүл." },

@@ -101,9 +101,7 @@ function AppDetail() {
           {app.status === "rejected" && app.rejectionReason && (
             <Alert variant="destructive">
               <AlertDescription>
-                <strong>
-                  {lang === "mn" ? "Татгалзсан шалтгаан:" : "Reason for rejection:"}
-                </strong>{" "}
+                <strong>{lang === "mn" ? "Татгалзсан шалтгаан:" : "Reason for rejection:"}</strong>{" "}
                 {app.rejectionReason}
               </AlertDescription>
             </Alert>
@@ -129,11 +127,7 @@ function AppDetail() {
               label={lang === "mn" ? "Байршил" : "Location"}
               value={app.exam.location}
             />
-            <Field
-              icon={Phone}
-              label={lang === "mn" ? "Утас" : "Phone"}
-              value={app.phone || "—"}
-            />
+            <Field icon={Phone} label={lang === "mn" ? "Утас" : "Phone"} value={app.phone || "—"} />
             <Field
               icon={Home}
               label={lang === "mn" ? "Хаяг" : "Address"}

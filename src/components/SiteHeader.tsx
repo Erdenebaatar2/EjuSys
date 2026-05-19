@@ -38,7 +38,9 @@ export function SiteHeader() {
               to={item.to}
               className="px-3 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors text-sm"
               activeOptions={{ exact: item.exact }}
-              activeProps={{ className: "px-3 py-1.5 rounded-md text-foreground font-medium bg-muted/60 text-sm" }}
+              activeProps={{
+                className: "px-3 py-1.5 rounded-md text-foreground font-medium bg-muted/60 text-sm",
+              }}
             >
               {lang === "mn" ? item.mn : item.en}
             </Link>
@@ -62,7 +64,11 @@ export function SiteHeader() {
               <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
                 <Link to="/login">{lang === "mn" ? "Нэвтрэх" : "Sign in"}</Link>
               </Button>
-              <Button asChild size="sm" className="bg-gradient-to-br from-[oklch(0.28_0.12_268)] to-[oklch(0.40_0.15_276)] text-white hover:opacity-90 shadow-sm">
+              <Button
+                asChild
+                size="sm"
+                className="bg-gradient-to-br from-[oklch(0.28_0.12_268)] to-[oklch(0.40_0.15_276)] text-white hover:opacity-90 shadow-sm"
+              >
                 <Link to="/register">{lang === "mn" ? "Бүртгүүлэх" : "Register"}</Link>
               </Button>
             </>

@@ -28,23 +28,30 @@ export function SiteFooter() {
               </div>
               <div className="leading-tight">
                 <div className="text-sm font-bold text-foreground">EJU Бүртгэлийн Систем</div>
-                <div className="text-[10px] text-muted-foreground">Examination for Japanese University Admission</div>
+                <div className="text-[10px] text-muted-foreground">
+                  Examination for Japanese University Admission
+                </div>
               </div>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Монгол оюутнуудад зориулсан EJU шалгалтын онлайн бүртгэлийн систем.
-              Шалгалт сонгож, баримтаа байршуулж, статусаа хянаарай.
+              Монгол оюутнуудад зориулсан EJU шалгалтын онлайн бүртгэлийн систем. Шалгалт сонгож,
+              баримтаа байршуулж, статусаа хянаарай.
             </p>
             <p className="mt-3 text-xs text-muted-foreground/60">日本留学試験出願システム</p>
           </div>
 
           {/* Product links */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Систем</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              Систем
+            </h4>
             <ul className="space-y-2.5">
               {LINKS.product.map((l) => (
                 <li key={l.href}>
-                  <Link to={l.href as "/"} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link
+                    to={l.href as "/"}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {l.label}
                   </Link>
                 </li>
@@ -54,7 +61,9 @@ export function SiteFooter() {
 
           {/* Resources */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Холбоос</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              Холбоос
+            </h4>
             <ul className="space-y-2.5">
               {LINKS.resources.map((l) => (
                 <li key={l.href}>
@@ -68,7 +77,10 @@ export function SiteFooter() {
                       {l.label} ↗
                     </a>
                   ) : (
-                    <a href={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <a
+                      href={l.href}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
                       {l.label}
                     </a>
                   )}

@@ -17,12 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Eye, Loader2 } from "lucide-react";
 
@@ -127,7 +122,9 @@ function AdminStudents() {
                   <TableHead>{lang === "mn" ? "Паспорт" : "Passport"}</TableHead>
                   <TableHead>{lang === "mn" ? "Утас" : "Phone"}</TableHead>
                   <TableHead>{lang === "mn" ? "Идэвхтэй" : "Active"}</TableHead>
-                  <TableHead className="text-right">{lang === "mn" ? "Үйлдэл" : "Actions"}</TableHead>
+                  <TableHead className="text-right">
+                    {lang === "mn" ? "Үйлдэл" : "Actions"}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,7 +168,12 @@ function AdminStudents() {
             {lang === "mn" ? "Нийт" : "Total"}: {data.total}
           </span>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
               {lang === "mn" ? "Өмнөх" : "Prev"}
             </Button>
             <Button
@@ -202,24 +204,34 @@ function AdminStudents() {
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-muted-foreground">{lang === "mn" ? "Имэйл" : "Email"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "mn" ? "Имэйл" : "Email"}
+                  </div>
                   <div className="font-medium">{detailQuery.data.email}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">{lang === "mn" ? "Паспорт" : "Passport"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "mn" ? "Паспорт" : "Passport"}
+                  </div>
                   <div className="font-medium">{detailQuery.data.passportNumber}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">{lang === "mn" ? "Утас" : "Phone"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "mn" ? "Утас" : "Phone"}
+                  </div>
                   <div className="font-medium">{detailQuery.data.phone ?? "—"}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">{lang === "mn" ? "Хаяг" : "Address"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "mn" ? "Хаяг" : "Address"}
+                  </div>
                   <div className="font-medium">{detailQuery.data.address ?? "—"}</div>
                 </div>
               </div>
               <div>
-                <h4 className="font-semibold mb-2">{lang === "mn" ? "Бүртгэлүүд" : "Applications"}</h4>
+                <h4 className="font-semibold mb-2">
+                  {lang === "mn" ? "Бүртгэлүүд" : "Applications"}
+                </h4>
                 {detailQuery.data.applications.length === 0 ? (
                   <p className="text-muted-foreground text-xs">{lang === "mn" ? "Алга" : "None"}</p>
                 ) : (

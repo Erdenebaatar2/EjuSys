@@ -76,7 +76,8 @@ async function writeWebResponse(webRes, res) {
   webRes.headers.forEach((value, key) => {
     if (key.toLowerCase() === "set-cookie") {
       const existing = headers["set-cookie"];
-      if (existing) headers["set-cookie"] = Array.isArray(existing) ? [...existing, value] : [existing, value];
+      if (existing)
+        headers["set-cookie"] = Array.isArray(existing) ? [...existing, value] : [existing, value];
       else headers["set-cookie"] = value;
     } else {
       headers[key] = value;

@@ -58,7 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email: string, password: string): Promise<{ error?: string; role?: AppRole | null }> {
+  async function login(
+    email: string,
+    password: string,
+  ): Promise<{ error?: string; role?: AppRole | null }> {
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
@@ -72,7 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = (await res.json()) as { token: string } & AppUser & { roles: string[] };
       localStorage.setItem(TOKEN_KEY, data.token);
       const computedRole = deriveRole(data.roles);
-      setUser({ id: data.id, email: data.email, firstName: data.firstName, lastName: data.lastName, roles: data.roles });
+      setUser({
+        id: data.id,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        roles: data.roles,
+      });
       setRole(computedRole);
       return { role: computedRole ?? undefined };
     } catch {

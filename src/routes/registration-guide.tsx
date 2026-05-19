@@ -179,10 +179,8 @@ function RegistrationGuidePage() {
 
             {/* Main grid */}
             <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_360px]">
-
               {/* ── Left column ── */}
               <div className="space-y-8">
-
                 {/* About card */}
                 <div className="rounded-xl border border-border bg-card px-6 py-7 shadow-card">
                   <div className="flex items-center gap-2 text-primary">
@@ -304,7 +302,6 @@ function RegistrationGuidePage() {
 
               {/* ── Right sidebar ── */}
               <aside className="space-y-5 lg:sticky lg:top-24 self-start">
-
                 {/* Bulletin download card */}
                 <div className="rounded-xl border border-border bg-card px-5 py-5 shadow-card">
                   <Badge variant="secondary" className="bg-primary/10 text-primary">
@@ -348,10 +345,7 @@ function RegistrationGuidePage() {
                   {/* Stats row */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     {statItems.map(({ num, labelMn, labelEn }) => (
-                      <div
-                        key={labelEn}
-                        className="rounded-lg bg-muted/40 p-3 text-center"
-                      >
+                      <div key={labelEn} className="rounded-lg bg-muted/40 p-3 text-center">
                         <div className="text-2xl font-semibold text-primary">{num}</div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {lang === "mn" ? labelMn : labelEn}

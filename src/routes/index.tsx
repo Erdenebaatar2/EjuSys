@@ -151,8 +151,10 @@ const TESTIMONIALS = [
     nameMn: "Б. Болормаа",
     roleMn: "Токиогийн Их Сургуулийн оюутан",
     roleEn: "Student at University of Tokyo",
-    textMn: "Системийг ашиглахад маш хялбар байсан. Бүртгэлийн явцыг хянах функц маш тустай байлаа.",
-    textEn: "The system was very easy to use. The application tracking feature was extremely helpful.",
+    textMn:
+      "Системийг ашиглахад маш хялбар байсан. Бүртгэлийн явцыг хянах функц маш тустай байлаа.",
+    textEn:
+      "The system was very easy to use. The application tracking feature was extremely helpful.",
     initials: "ББ",
     color: "bg-indigo-100 text-indigo-700",
   },
@@ -160,7 +162,8 @@ const TESTIMONIALS = [
     nameMn: "Д. Тэмүүжин",
     roleMn: "Осакагийн Их Сургуулийн оюутан",
     roleEn: "Student at Osaka University",
-    textMn: "Онлайн бүртгэл хийх боломж маш дөхөм байсан. Бичиг баримтаа хялбархан байршуулж чадсан.",
+    textMn:
+      "Онлайн бүртгэл хийх боломж маш дөхөм байсан. Бичиг баримтаа хялбархан байршуулж чадсан.",
     textEn: "Online registration was very convenient. I could easily upload all my documents.",
     initials: "ДТ",
     color: "bg-violet-100 text-violet-700",
@@ -169,8 +172,10 @@ const TESTIMONIALS = [
     nameMn: "О. Мөнхзул",
     roleMn: "Киотогийн Их Сургуулийн оюутан",
     roleEn: "Student at Kyoto University",
-    textMn: "Монгол хэл дээр бүртгүүлэх боломж байгаа нь маш сайн хэрэг болсон. Найзуудадаа санал болгоно.",
-    textEn: "Having registration available in Mongolian was fantastic. I'll recommend it to friends.",
+    textMn:
+      "Монгол хэл дээр бүртгүүлэх боломж байгаа нь маш сайн хэрэг болсон. Найзуудадаа санал болгоно.",
+    textEn:
+      "Having registration available in Mongolian was fantastic. I'll recommend it to friends.",
     initials: "ОМ",
     color: "bg-rose-100 text-rose-700",
   },
@@ -194,7 +199,10 @@ function Index() {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-[oklch(0.55_0.18_280)] opacity-[0.12] blur-[100px]" />
           <div className="absolute -bottom-20 -left-20 h-[400px] w-[400px] rounded-full bg-[oklch(0.65_0.15_15)] opacity-[0.08] blur-[80px]" />
-          <svg className="absolute inset-0 h-full w-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            className="absolute inset-0 h-full w-full opacity-[0.04]"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <defs>
               <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                 <circle cx="2" cy="2" r="1.5" fill="white" />
@@ -214,9 +222,17 @@ function Index() {
 
             <h1 className="mt-6 text-4xl font-bold leading-[1.12] tracking-tight text-white md:text-5xl lg:text-[3.5rem]">
               {lang === "mn" ? (
-                <>Япон сургуульд<br /><span className="text-[oklch(0.88_0.12_15)]">элсэх таны эхлэл</span></>
+                <>
+                  Япон сургуульд
+                  <br />
+                  <span className="text-[oklch(0.88_0.12_15)]">элсэх таны эхлэл</span>
+                </>
               ) : (
-                <>Your gateway to<br /><span className="text-[oklch(0.88_0.12_15)]">studying in Japan</span></>
+                <>
+                  Your gateway to
+                  <br />
+                  <span className="text-[oklch(0.88_0.12_15)]">studying in Japan</span>
+                </>
               )}
             </h1>
 
@@ -227,12 +243,22 @@ function Index() {
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="bg-white text-[oklch(0.28_0.12_268)] hover:bg-white/90 shadow-lg font-semibold">
+              <Button
+                asChild
+                size="lg"
+                className="bg-white text-[oklch(0.28_0.12_268)] hover:bg-white/90 shadow-lg font-semibold"
+              >
                 <Link to="/register">
-                  {lang === "mn" ? "Эхлэх" : "Get started"} <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {lang === "mn" ? "Эхлэх" : "Get started"}{" "}
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10 border border-white/20">
+              <Button
+                asChild
+                size="lg"
+                variant="ghost"
+                className="text-white hover:bg-white/10 border border-white/20"
+              >
                 <Link to="/login">{lang === "mn" ? "Нэвтрэх" : "Sign in"}</Link>
               </Button>
             </div>
@@ -244,7 +270,10 @@ function Index() {
                 lang === "mn" ? "✓ Монгол хэлтэй" : "✓ Mongolian language",
                 lang === "mn" ? "✓ Аюулгүй систем" : "✓ Secure system",
               ].map((chip) => (
-                <span key={chip} className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 border border-white/15">
+                <span
+                  key={chip}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/80 border border-white/15"
+                >
                   {chip}
                 </span>
               ))}
@@ -265,7 +294,9 @@ function Index() {
                   <GraduationCap className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground">{lang === "mn" ? "Нийт оюутан" : "Total students"}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {lang === "mn" ? "Нийт оюутан" : "Total students"}
+                  </p>
                   <p className="text-base font-bold text-foreground">500+</p>
                 </div>
               </div>
@@ -278,7 +309,9 @@ function Index() {
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground">{lang === "mn" ? "Зөвшөөрөгдсөн" : "Approved"}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {lang === "mn" ? "Зөвшөөрөгдсөн" : "Approved"}
+                  </p>
                   <p className="text-base font-bold text-foreground">98%</p>
                 </div>
               </div>
@@ -293,7 +326,9 @@ function Index() {
           {STATS.map((s) => (
             <div key={s.labelMn} className="bg-card px-6 py-7 text-center">
               <p className="text-3xl font-bold text-primary">{s.valueMn}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{lang === "mn" ? s.labelMn : s.labelEn}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {lang === "mn" ? s.labelMn : s.labelEn}
+              </p>
             </div>
           ))}
         </div>
@@ -319,11 +354,17 @@ function Index() {
           <div className="relative grid gap-8 md:grid-cols-4">
             {/* Connecting line */}
             <div className="pointer-events-none absolute top-10 left-0 right-0 hidden md:block">
-              <div className="mx-auto h-px bg-gradient-to-r from-transparent via-border to-transparent" style={{ width: "calc(100% - 4rem)", marginLeft: "2rem" }} />
+              <div
+                className="mx-auto h-px bg-gradient-to-r from-transparent via-border to-transparent"
+                style={{ width: "calc(100% - 4rem)", marginLeft: "2rem" }}
+              />
             </div>
 
             {STEPS.map((step) => (
-              <div key={step.num} className="relative flex flex-col items-center text-center md:items-center">
+              <div
+                key={step.num}
+                className="relative flex flex-col items-center text-center md:items-center"
+              >
                 <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[oklch(0.45_0.16_280)] text-primary-foreground shadow-[0_8px_24px_-8px_oklch(0.36_0.13_264/0.45)] z-10">
                   <step.icon className="h-7 w-7" />
                   <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary shadow border border-border">
@@ -350,12 +391,17 @@ function Index() {
               {lang === "mn" ? "Системийн давуу талууд" : "Platform features"}
             </p>
             <h2 className="text-3xl font-bold text-foreground md:text-4xl">
-              {lang === "mn" ? "Бүх шаардлагатай хэрэгсэл нэг дор" : "Everything you need in one place"}
+              {lang === "mn"
+                ? "Бүх шаардлагатай хэрэгсэл нэг дор"
+                : "Everything you need in one place"}
             </h2>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <div key={f.titleMn} className="group rounded-xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+              <div
+                key={f.titleMn}
+                className="group rounded-xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              >
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${f.color}`}>
                   <f.icon className="h-5 w-5" />
                 </div>
@@ -389,13 +435,19 @@ function Index() {
               </p>
             </div>
             <Button asChild variant="outline" size="sm" className="shrink-0">
-              <Link to="/register">{lang === "mn" ? "Бүртгүүлэх" : "Register now"} <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+              <Link to="/register">
+                {lang === "mn" ? "Бүртгүүлэх" : "Register now"}{" "}
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
             </Button>
           </div>
 
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
             {SUBJECTS.map((s) => (
-              <div key={s.code} className={`rounded-xl border px-5 py-4 ${SUBJECT_COLORS[s.cat]} transition-shadow hover:shadow-sm`}>
+              <div
+                key={s.code}
+                className={`rounded-xl border px-5 py-4 ${SUBJECT_COLORS[s.cat]} transition-shadow hover:shadow-sm`}
+              >
                 <span className="text-xs font-mono font-bold opacity-60">{s.code}</span>
                 <p className="mt-1 text-sm font-semibold">{lang === "mn" ? s.mn : s.en}</p>
               </div>
@@ -417,22 +469,31 @@ function Index() {
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {TESTIMONIALS.map((t) => (
-              <div key={t.nameMn} className="rounded-xl border border-border bg-card p-6 shadow-sm flex flex-col gap-4">
+              <div
+                key={t.nameMn}
+                className="rounded-xl border border-border bg-card p-6 shadow-sm flex flex-col gap-4"
+              >
                 <div className="flex gap-1">
-                  {[1,2,3,4,5].map((n) => (
-                    <span key={n} className="text-amber-400 text-sm">★</span>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span key={n} className="text-amber-400 text-sm">
+                      ★
+                    </span>
                   ))}
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground flex-1">
                   "{lang === "mn" ? t.textMn : t.textEn}"
                 </p>
                 <div className="flex items-center gap-3 pt-2 border-t border-border">
-                  <div className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold shrink-0 ${t.color}`}>
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold shrink-0 ${t.color}`}
+                  >
                     {t.initials}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground">{t.nameMn}</p>
-                    <p className="text-[11px] text-muted-foreground">{lang === "mn" ? t.roleMn : t.roleEn}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {lang === "mn" ? t.roleMn : t.roleEn}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -447,11 +508,19 @@ function Index() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="relative">
               <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-primary/10 to-violet-500/5 -z-10" />
-              <img src={picture2} alt="EJU exam campus" className="rounded-2xl shadow-elegant border border-border w-full object-cover h-[360px]" />
+              <img
+                src={picture2}
+                alt="EJU exam campus"
+                className="rounded-2xl shadow-elegant border border-border w-full object-cover h-[360px]"
+              />
               {/* Floating badge */}
               <div className="absolute -bottom-4 -right-4 rounded-xl bg-card border border-border shadow-card px-5 py-3">
-                <p className="text-xs text-muted-foreground">{lang === "mn" ? "Дараагийн шалгалт" : "Next exam session"}</p>
-                <p className="text-sm font-bold text-foreground mt-0.5">2026 · {lang === "mn" ? "6-р сар" : "June"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {lang === "mn" ? "Дараагийн шалгалт" : "Next exam session"}
+                </p>
+                <p className="text-sm font-bold text-foreground mt-0.5">
+                  2026 · {lang === "mn" ? "6-р сар" : "June"}
+                </p>
               </div>
             </div>
             <div>
@@ -459,7 +528,9 @@ function Index() {
                 {lang === "mn" ? "Яагаад биднийг сонгох вэ?" : "Why choose us?"}
               </p>
               <h2 className="text-3xl font-bold text-foreground md:text-4xl leading-tight">
-                {lang === "mn" ? "Монгол оюутнуудад зориулсан, монголоор" : "Built for Mongolian students, in Mongolian"}
+                {lang === "mn"
+                  ? "Монгол оюутнуудад зориулсан, монголоор"
+                  : "Built for Mongolian students, in Mongolian"}
               </h2>
               <p className="mt-4 text-muted-foreground leading-relaxed">
                 {lang === "mn"
@@ -468,8 +539,18 @@ function Index() {
               </p>
               <ul className="mt-6 space-y-3">
                 {(lang === "mn"
-                  ? ["Монгол хэлний дэмжлэг", "Хялбар баримт байршуулалт", "Бодит цагийн статус хянах", "Хурдан баталгаажуулалт"]
-                  : ["Full Mongolian language support", "Simple document upload flow", "Real-time application status", "Quick approval notifications"]
+                  ? [
+                      "Монгол хэлний дэмжлэг",
+                      "Хялбар баримт байршуулалт",
+                      "Бодит цагийн статус хянах",
+                      "Хурдан баталгаажуулалт",
+                    ]
+                  : [
+                      "Full Mongolian language support",
+                      "Simple document upload flow",
+                      "Real-time application status",
+                      "Quick approval notifications",
+                    ]
                 ).map((item) => (
                   <li key={item} className="flex items-center gap-3 text-sm text-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
@@ -479,7 +560,8 @@ function Index() {
               </ul>
               <Button asChild size="lg" className="mt-8 shadow-elegant">
                 <Link to="/register">
-                  {lang === "mn" ? "Одоо бүртгүүлэх" : "Register now"} <ArrowRight className="ml-1.5 h-4 w-4" />
+                  {lang === "mn" ? "Одоо бүртгүүлэх" : "Register now"}{" "}
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -491,7 +573,10 @@ function Index() {
       <section className="py-20 bg-gradient-to-br from-[oklch(0.22_0.10_264)] to-[oklch(0.32_0.15_276)] relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-white/5 blur-[60px]" />
-          <svg className="absolute inset-0 h-full w-full opacity-[0.035]" xmlns="http://www.w3.org/2000/svg">
+          <svg
+            className="absolute inset-0 h-full w-full opacity-[0.035]"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <defs>
               <pattern id="dots2" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
                 <circle cx="2" cy="2" r="1.5" fill="white" />
@@ -505,7 +590,9 @@ function Index() {
             {lang === "mn" ? "Бүртгэл эхлэх" : "Get started today"}
           </p>
           <h2 className="text-3xl font-bold text-white md:text-5xl max-w-2xl mx-auto leading-tight">
-            {lang === "mn" ? "Японд суралцах мөрөөллөө биелүүл" : "Make your dream of studying in Japan a reality"}
+            {lang === "mn"
+              ? "Японд суралцах мөрөөллөө биелүүл"
+              : "Make your dream of studying in Japan a reality"}
           </h2>
           <p className="mt-4 text-white/60 max-w-lg mx-auto">
             {lang === "mn"
@@ -513,19 +600,31 @@ function Index() {
               : "Register for the EJU exam in just a few steps and change your future."}
           </p>
           <div className="mt-8 flex justify-center flex-wrap gap-3">
-            <Button asChild size="lg" className="bg-white text-[oklch(0.28_0.12_268)] hover:bg-white/90 font-semibold shadow-lg">
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-[oklch(0.28_0.12_268)] hover:bg-white/90 font-semibold shadow-lg"
+            >
               <Link to="/register">
-                {lang === "mn" ? "Үнэгүй бүртгүүлэх" : "Register for free"} <ArrowRight className="ml-1.5 h-4 w-4" />
+                {lang === "mn" ? "Үнэгүй бүртгүүлэх" : "Register for free"}{" "}
+                <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="ghost" className="text-white hover:bg-white/10 border border-white/20">
+            <Button
+              asChild
+              size="lg"
+              variant="ghost"
+              className="text-white hover:bg-white/10 border border-white/20"
+            >
               <Link to="/registration-guide">
                 {lang === "mn" ? "Зааварчилгаа харах" : "View guide"}
               </Link>
             </Button>
           </div>
           <p className="mt-6 text-white/40 text-xs">
-            {lang === "mn" ? "Бүртгэл үнэгүй · Нэмэлт хураамж байхгүй" : "Free to register · No hidden fees"}
+            {lang === "mn"
+              ? "Бүртгэл үнэгүй · Нэмэлт хураамж байхгүй"
+              : "Free to register · No hidden fees"}
           </p>
         </div>
       </section>

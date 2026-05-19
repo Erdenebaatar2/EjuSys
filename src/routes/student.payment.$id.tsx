@@ -155,9 +155,7 @@ function PaymentPage() {
         <Card className="shadow-card border-destructive/30">
           <CardContent className="py-6 text-center space-y-4">
             <p className="text-sm text-destructive">
-              {createMut.error instanceof Error
-                ? createMut.error.message
-                : "QPay2 invoice failed"}
+              {createMut.error instanceof Error ? createMut.error.message : "QPay2 invoice failed"}
             </p>
             <Button onClick={() => createMut.mutate()} variant="outline">
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -186,9 +184,7 @@ function PaymentPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>{lang === "mn" ? "QPay2 invoice" : "QPay2 invoice"}</span>
-            <span className="text-base font-semibold">
-              {data?.amount.toLocaleString()} ₮
-            </span>
+            <span className="text-base font-semibold">{data?.amount.toLocaleString()} ₮</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
@@ -216,9 +212,7 @@ function PaymentPage() {
       {deeplinks.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>
-              {lang === "mn" ? "Банкны апп-аар нээх" : "Open with bank app"}
-            </CardTitle>
+            <CardTitle>{lang === "mn" ? "Банкны апп-аар нээх" : "Open with bank app"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">

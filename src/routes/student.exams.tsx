@@ -77,13 +77,18 @@ function StudentExams() {
                     <div className="min-w-0">
                       <h3 className="font-semibold text-lg leading-tight">{e.name}</h3>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        {sessionLabel(e.session.toLowerCase() as "first" | "second", lang)} · {e.year}
+                        {sessionLabel(e.session.toLowerCase() as "first" | "second", lang)} ·{" "}
+                        {e.year}
                       </div>
                     </div>
                     <Badge variant={open ? "default" : "secondary"} className="shrink-0">
                       {open
-                        ? lang === "mn" ? "Нээлттэй" : "Open"
-                        : lang === "mn" ? "Хаалттай" : "Closed"}
+                        ? lang === "mn"
+                          ? "Нээлттэй"
+                          : "Open"
+                        : lang === "mn"
+                          ? "Хаалттай"
+                          : "Closed"}
                     </Badge>
                   </div>
 
