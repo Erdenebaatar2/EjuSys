@@ -10,7 +10,7 @@ import java.util.UUID;
 @Table(name = "applications")
 public class Application {
 
-    public enum Status { PENDING, APPROVED, REJECTED }
+    public enum Status { PENDING_PAYMENT, PENDING, APPROVED, REJECTED }
     public enum PaymentStatus { UNPAID, PAID }
     public enum Sex { MALE, FEMALE }
     public enum ScienceOption { PHYSICS, CHEMISTRY, BIOLOGY }
