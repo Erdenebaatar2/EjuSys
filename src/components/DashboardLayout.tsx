@@ -4,7 +4,7 @@ import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Loader2, LogOut, Menu } from "lucide-react";
+import { GraduationCap, Loader2, LogOut, Menu, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface NavItem {
@@ -12,6 +12,7 @@ interface NavItem {
   labelMn: string;
   labelJa: string;
   icon: React.ComponentType<{ className?: string }>;
+  highlight?: boolean;
 }
 
 interface DashboardLayoutProps {
@@ -44,54 +45,94 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
     );
   }
 
+  const regularItems = navItems.filter((it) => !it.highlight);
+  const highlightItems = navItems.filter((it) => it.highlight);
+
   const SidebarContent = () => (
     <>
+      {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-5 border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-hero text-primary-foreground shadow-soft">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero text-primary-foreground shadow-soft">
           <GraduationCap className="h-5 w-5" />
         </div>
         <div className="leading-tight">
-          <div className="text-sm font-semibold">EJU</div>
+          <div className="text-sm font-bold tracking-tight">EJU</div>
           <div className="text-[10px] text-muted-foreground">
             {requireRole === "admin"
-              ? lang === "mn"
-                ? "Админ"
-                : "Admin"
-              : lang === "mn"
-                ? "Оюутан"
-                : "Student"}
+              ? lang === "mn" ? "Админ" : "Admin"
+              : lang === "mn" ? "Оюутан" : "Student"}
           </div>
         </div>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((it) => {
-          const isActive = location.pathname === it.to || location.pathname.startsWith(it.to + "/");
+
+      {/* Regular nav */}
+      <nav className="flex-1 px-3 pt-4 space-y-0.5">
+        {regularItems.map((it) => {
+          const isActive =
+            location.pathname === it.to || location.pathname.startsWith(it.to + "/");
           return (
             <Link
               key={it.to}
               to={it.to}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
                 isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
+                  : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               }`}
             >
-              <it.icon className="h-4 w-4" />
-              <span className="flex-1">{lang === "mn" ? it.labelMn : it.labelJa}</span>
+              <it.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+              <span className="flex-1 leading-tight">{lang === "mn" ? it.labelMn : it.labelJa}</span>
+              {isActive && <ChevronRight className="h-3 w-3 text-primary/50" />}
             </Link>
           );
         })}
+
+        {/* Highlighted CTA nav items */}
+        {highlightItems.length > 0 && (
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1.5">
+              {lang === "mn" ? "Үйлдэл" : "Actions"}
+            </p>
+            {highlightItems.map((it) => {
+              const isActive =
+                location.pathname === it.to || location.pathname.startsWith(it.to + "/");
+              return (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground font-semibold shadow-elegant"
+                      : "bg-primary/10 text-primary font-medium hover:bg-primary/20"
+                  }`}
+                >
+                  <it.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 leading-tight">{lang === "mn" ? it.labelMn : it.labelJa}</span>
+                  <ArrowRightSmall />
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
+
+      {/* Bottom: user + sign out */}
       <div className="border-t border-sidebar-border p-3 space-y-2">
-        <div className="px-2 text-xs text-muted-foreground truncate">{user.email}</div>
+        <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-sidebar-accent/30">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0">
+            {user.email?.[0]?.toUpperCase() ?? "U"}
+          </div>
+          <p className="text-xs text-muted-foreground truncate flex-1">{user.email}</p>
+        </div>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="w-full justify-start"
+          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
           onClick={() => void signOut()}
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="mr-2 h-3.5 w-3.5" />
           {lang === "mn" ? "Гарах" : "Log out"}
         </Button>
       </div>
@@ -100,11 +141,14 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
 
   return (
     <div className="min-h-screen flex bg-background">
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
         <SidebarContent />
       </aside>
 
+      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile topbar */}
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 backdrop-blur px-4 h-14">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -116,16 +160,27 @@ export function DashboardLayout({ requireRole, navItems }: DashboardLayoutProps)
               <SidebarContent />
             </SheetContent>
           </Sheet>
-          <div className="font-semibold text-sm">EJU</div>
+          <div className="font-bold text-sm tracking-tight">EJU</div>
           <LangSwitcher />
         </header>
-        <div className="hidden md:flex items-center justify-end gap-3 border-b border-border px-6 h-14 bg-background/60">
+
+        {/* Desktop topbar */}
+        <div className="hidden md:flex items-center justify-end gap-3 border-b border-border px-6 h-14 bg-background/60 backdrop-blur-sm">
           <LangSwitcher />
         </div>
+
         <main className="flex-1 p-5 md:p-8 overflow-auto">
           <Outlet />
         </main>
       </div>
     </div>
+  );
+}
+
+function ArrowRightSmall() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0 opacity-60">
+      <path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

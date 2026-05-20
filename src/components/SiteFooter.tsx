@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, ExternalLink } from "lucide-react";
 
 const LINKS = {
   product: [
@@ -20,10 +20,11 @@ export function SiteFooter() {
     <footer className="border-t border-border bg-card">
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-10 md:grid-cols-3 lg:grid-cols-4">
+
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[oklch(0.28_0.12_268)] to-[oklch(0.42_0.16_276)] text-white shadow-sm">
+            <Link to="/" className="inline-flex items-center gap-2.5 mb-4 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[oklch(0.28_0.12_268)] to-[oklch(0.42_0.16_276)] text-white shadow-sm transition-shadow group-hover:shadow-md">
                 <GraduationCap className="h-5 w-5" />
               </div>
               <div className="leading-tight">
@@ -37,7 +38,9 @@ export function SiteFooter() {
               Монгол оюутнуудад зориулсан EJU шалгалтын онлайн бүртгэлийн систем. Шалгалт сонгож,
               баримтаа байршуулж, статусаа хянаарай.
             </p>
-            <p className="mt-3 text-xs text-muted-foreground/60">日本留学試験出願システム</p>
+            <p className="mt-3 text-xs text-muted-foreground/50 font-mono">
+              日本留学試験出願システム
+            </p>
           </div>
 
           {/* Product links */}
@@ -50,7 +53,7 @@ export function SiteFooter() {
                 <li key={l.href}>
                   <Link
                     to={l.href as "/"}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors hover:underline underline-offset-4"
                   >
                     {l.label}
                   </Link>
@@ -72,14 +75,15 @@ export function SiteFooter() {
                       href={l.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors hover:underline underline-offset-4"
                     >
-                      {l.label} ↗
+                      {l.label}
+                      <ExternalLink className="h-3 w-3 opacity-50" />
                     </a>
                   ) : (
                     <a
                       href={l.href}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors hover:underline underline-offset-4"
                     >
                       {l.label}
                     </a>
@@ -95,8 +99,8 @@ export function SiteFooter() {
           <p className="text-xs text-muted-foreground">
             © {year} EJU Бүртгэлийн Систем. Бүх эрх хуулиар хамгаалагдсан.
           </p>
-          <p className="text-xs text-muted-foreground/50">
-            Powered by Spring Boot + TanStack Start
+          <p className="text-xs text-muted-foreground/40">
+            Spring Boot + TanStack Start
           </p>
         </div>
       </div>
