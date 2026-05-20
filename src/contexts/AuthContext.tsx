@@ -12,6 +12,11 @@ export interface AppUser {
   roles: string[];
 }
 
+interface AuthResponse {
+  token: string;
+  user: AppUser & { role?: string | null };
+}
+
 interface AuthContextType {
   user: AppUser | null;
   role: AppRole | null;
@@ -24,10 +29,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = "jwt_token";
 
-function deriveRole(roles: string[]): AppRole | null {
+function deriveRole(roles: string[] = [], fallback?: string | null): AppRole | null {
   if (roles.includes("ADMIN")) return "admin";
   if (roles.includes("STUDENT")) return "student";
+  if (fallback === "ADMIN") return "admin";
+  if (fallback === "STUDENT") return "student";
   return null;
+}
+
+function normalizeUser(user: AuthResponse["user"]): AppUser {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    roles: user.roles ?? [],
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -46,11 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
       .then((res) => {
         if (!res.ok) throw new Error("Invalid token");
-        return res.json() as Promise<AppUser & { roles: string[] }>;
+        return res.json() as Promise<AppUser & { role?: string | null }>;
       })
       .then((data) => {
-        setUser(data);
-        setRole(deriveRole(data.roles));
+        setUser(normalizeUser(data));
+        setRole(deriveRole(data.roles, data.role));
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY);
@@ -72,16 +89,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
         return { error: body.message ?? "Нэвтрэх амжилтгүй" };
       }
-      const data = (await res.json()) as { token: string } & AppUser & { roles: string[] };
+      const data = (await res.json()) as AuthResponse;
+      if (!data.token || !data.user) {
+        return { error: "Нэвтрэх хариу буруу байна" };
+      }
       localStorage.setItem(TOKEN_KEY, data.token);
-      const computedRole = deriveRole(data.roles);
-      setUser({
-        id: data.id,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        roles: data.roles,
-      });
+      const normalizedUser = normalizeUser(data.user);
+      const computedRole = deriveRole(data.user.roles, data.user.role);
+      setUser(normalizedUser);
       setRole(computedRole);
       return { role: computedRole ?? undefined };
     } catch {

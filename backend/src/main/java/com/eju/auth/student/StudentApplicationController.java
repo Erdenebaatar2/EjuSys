@@ -72,7 +72,10 @@ public class StudentApplicationController {
         UUID userId = (UUID) auth.getPrincipal();
         Optional<Exam> activeExam = activeExam();
         if (activeExam.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "No active exam is available"));
+            String message = examRepo.findFirstByActiveTrue().isPresent()
+                    ? "Active exam registration is not open"
+                    : "No active exam is available";
+            return ResponseEntity.badRequest().body(Map.of("message", message));
         }
         if (appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Application already exists"));
@@ -113,9 +116,7 @@ public class StudentApplicationController {
     }
 
     private Optional<Exam> activeExam() {
-        LocalDate today = LocalDate.now();
-        return examRepo.findFirstByActiveTrue()
-                .filter(e -> !e.getRegistrationEnd().isBefore(today));
+        return examRepo.findFirstRegistrationOpen(LocalDate.now());
     }
 
     private String validatePayload(ApplicationPayload payload) {

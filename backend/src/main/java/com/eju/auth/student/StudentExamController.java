@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/student/exam")
+@RequestMapping("/api/student")
 public class StudentExamController {
 
     private final ExamRepository examRepo;
@@ -22,12 +22,11 @@ public class StudentExamController {
         this.appRepo = appRepo;
     }
 
-    @GetMapping
+    @GetMapping("/exam")
     public ResponseEntity<?> getActiveExam(Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
         LocalDate today = LocalDate.now();
-        return examRepo.findFirstByActiveTrue()
-                .filter(e -> !e.getRegistrationEnd().isBefore(today))
+        return examRepo.findFirstRegistrationOpen(today)
                 .map(e -> {
                     Map<String, Object> result = new HashMap<>(toMap(e));
                     appRepo.findByUserIdAndExamId(userId, e.getId()).ifPresent(a ->
@@ -42,6 +41,15 @@ public class StudentExamController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/exams")
+    public List<Map<String, Object>> getAvailableExams() {
+        LocalDate today = LocalDate.now();
+        return examRepo.findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today)
+                .stream()
+                .map(this::toMap)
+                .toList();
+    }
+
     private Map<String, Object> toMap(Exam e) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", e.getId());
@@ -54,6 +62,7 @@ public class StudentExamController {
         m.put("registrationEnd", e.getRegistrationEnd().toString());
         m.put("session", e.getSession().name().toLowerCase());
         m.put("year", e.getYear());
+        m.put("active", e.isActive());
         m.put("isActive", e.isActive());
         m.put("description", e.getDescription());
         return m;

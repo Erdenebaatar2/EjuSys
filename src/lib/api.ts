@@ -81,11 +81,14 @@ export const api = {
   login: (email: string, password: string) =>
     apiPost<{
       token: string;
-      id: string;
-      email: string;
-      firstName: string;
-      lastName: string;
-      roles: string[];
+      user: {
+        id: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        roles: string[];
+        role?: string | null;
+      };
     }>("/api/auth/login", { email, password }),
   register: (data: { email: string; password: string; firstName: string; lastName: string }) =>
     apiPost("/api/auth/register", data),

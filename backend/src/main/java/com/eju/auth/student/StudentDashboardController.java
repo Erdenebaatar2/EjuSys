@@ -35,8 +35,7 @@ public class StudentDashboardController {
         UUID userId = (UUID) auth.getPrincipal();
 
         LocalDate today = LocalDate.now();
-        var activeExamOpt = examRepo.findFirstByActiveTrue()
-                .filter(e -> !e.getRegistrationEnd().isBefore(today));
+        var activeExamOpt = examRepo.findFirstRegistrationOpen(today);
 
         List<Application> apps = appRepo.findByUserId(userId);
         long totalApps = apps.size();
