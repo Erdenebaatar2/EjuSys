@@ -94,8 +94,8 @@ function StudentDashboard() {
             asChild
             className="bg-white/15 hover:bg-white/25 border border-white/20 text-white shadow-none shrink-0 transition-all"
           >
-            <Link to="/student/application">
-              {lang === "mn" ? "Бүртгэлийн маягт" : "Application form"}
+            <Link to="/student/exams">
+              {lang === "mn" ? "Шалгалтууд харах" : "Browse exams"}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
@@ -185,10 +185,10 @@ function StudentDashboard() {
                 {/* CTA */}
                 <div className="shrink-0 flex flex-col gap-2 sm:items-end">
                   <Button asChild className="shadow-soft">
-                    <Link to="/student/application">
+                    <Link to="/student/exams">
                       {data.hasApplication
-                        ? lang === "mn" ? "Бүртгэл харах" : "View application"
-                        : lang === "mn" ? "Бүртгэлийн маягт" : "Open form"}
+                        ? lang === "mn" ? "Шалгалтууд харах" : "View exams"
+                        : lang === "mn" ? "Бүртгүүлэх" : "Register now"}
                       <ChevronRight className="ml-1 h-4 w-4" />
                     </Link>
                   </Button>
@@ -230,12 +230,12 @@ function StudentDashboard() {
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             {
-              to: "/student/application" as const,
+              to: "/student/exams" as const,
               icon: FileText,
               labelMn: "Шалгалтанд бүртгүүлэх",
               labelEn: "Register for exam",
-              descMn: "Бүртгэлийн маягт бөглөх",
-              descEn: "Fill in the application form",
+              descMn: "Идэвхтэй шалгалтуудаас сонгох",
+              descEn: "Choose from active exam sessions",
               color: "text-indigo-600 bg-indigo-50",
             },
             {

@@ -27,8 +27,16 @@ import { CheckCircle2, CreditCard, Loader2, RefreshCw, Smartphone, Upload } from
 
 export const Route = createFileRoute("/student/application")({
   head: () => ({ meta: [{ title: "EJU application | EjuSys" }] }),
-  component: StudentApplicationPage,
+  component: StudentApplicationRedirect,
 });
+
+function StudentApplicationRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    void navigate({ to: "/student/exams", replace: true });
+  }, [navigate]);
+  return null;
+}
 
 /* ─── schema ─────────────────────────────────────── */
 const schema = z
