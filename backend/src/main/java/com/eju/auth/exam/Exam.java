@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Entity
@@ -48,6 +49,18 @@ public class Exam {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(name = "exam_info_location")
+    private String examInfoLocation;
+
+    @Column(name = "exam_info_start_time")
+    private LocalTime examInfoStartTime;
+
+    @Column(name = "exam_info_method", columnDefinition = "text")
+    private String examInfoMethod;
+
+    @Column(name = "exam_info_duration_minutes")
+    private Integer examInfoDurationMinutes;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -89,6 +102,14 @@ public class Exam {
     public void setRegistrationEnd(LocalDate v) { this.registrationEnd = v; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getExamInfoLocation() { return examInfoLocation; }
+    public void setExamInfoLocation(String examInfoLocation) { this.examInfoLocation = examInfoLocation; }
+    public LocalTime getExamInfoStartTime() { return examInfoStartTime; }
+    public void setExamInfoStartTime(LocalTime examInfoStartTime) { this.examInfoStartTime = examInfoStartTime; }
+    public String getExamInfoMethod() { return examInfoMethod; }
+    public void setExamInfoMethod(String examInfoMethod) { this.examInfoMethod = examInfoMethod; }
+    public Integer getExamInfoDurationMinutes() { return examInfoDurationMinutes; }
+    public void setExamInfoDurationMinutes(Integer examInfoDurationMinutes) { this.examInfoDurationMinutes = examInfoDurationMinutes; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public Instant getCreatedAt() { return createdAt; }

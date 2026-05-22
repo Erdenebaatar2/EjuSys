@@ -19,8 +19,15 @@ export function buildCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
   return [header, ...lines].join("\n");
 }
 
+export function buildCsvRows(rows: CsvValue[][]): string {
+  return rows.map((row) => row.map(escapeCsv).join(",")).join("\n");
+}
+
 export function downloadCsv(filename: string, csvText: string): void {
-  const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+  const normalizedCsv = csvText.replace(/\r?\n/g, "\r\n");
+  const blob = new Blob(["\ufeff", "sep=,\r\n", normalizedCsv], {
+    type: "text/csv;charset=utf-8;",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

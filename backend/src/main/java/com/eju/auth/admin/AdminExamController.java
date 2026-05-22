@@ -2,12 +2,14 @@ package com.eju.auth.admin;
 
 import com.eju.auth.exam.Exam;
 import com.eju.auth.exam.ExamRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/exam")
@@ -29,22 +31,27 @@ public class AdminExamController {
             LocalDate registrationStart,
             LocalDate registrationEnd,
             String description,
+            String examInfoLocation,
+            LocalTime examInfoStartTime,
+            String examInfoMethod,
+            Integer examInfoDurationMinutes,
             Boolean isActive
     ) {}
 
     @GetMapping
     public ResponseEntity<Exam> getCurrent() {
-        return examRepo.findFirstByActiveTrue()
+        return examRepo.findFirstByActiveTrueOrderByExamDateAsc()
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/all")
+    public List<Exam> getAll() {
+        return examRepo.findByActiveTrueOrderByExamDateAsc();
+    }
+
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ExamRequest req) {
-        if (examRepo.existsByActiveTrue()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "Active exam already exists"));
-        }
         Exam e = new Exam();
         applyRequest(e, req, true);
         return ResponseEntity.ok(examRepo.save(e));
@@ -52,17 +59,35 @@ public class AdminExamController {
 
     @PatchMapping
     public ResponseEntity<?> update(@RequestBody ExamRequest req) {
-        return examRepo.findFirstByActiveTrue().<ResponseEntity<?>>map(e -> {
+        return examRepo.findFirstByActiveTrueOrderByExamDateAsc().<ResponseEntity<?>>map(e -> {
             applyRequest(e, req, false);
             return ResponseEntity.ok(examRepo.save(e));
         }).orElseGet(() -> ResponseEntity.badRequest().body(Map.of("message", "Active exam not found")));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updateById(@PathVariable UUID id, @RequestBody ExamRequest req) {
+        return examRepo.findById(id).<ResponseEntity<?>>map(e -> {
+            applyRequest(e, req, false);
+            return ResponseEntity.ok(examRepo.save(e));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping
     public ResponseEntity<?> deleteCurrent() {
-        var activeExamOpt = examRepo.findFirstByActiveTrue();
+        var activeExamOpt = examRepo.findFirstByActiveTrueOrderByExamDateAsc();
         if (activeExamOpt.isEmpty()) return ResponseEntity.notFound().build();
         Exam exam = activeExamOpt.get();
+        exam.setActive(false);
+        examRepo.save(exam);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteById(@PathVariable UUID id) {
+        var examOpt = examRepo.findById(id);
+        if (examOpt.isEmpty()) return ResponseEntity.notFound().build();
+        Exam exam = examOpt.get();
         exam.setActive(false);
         examRepo.save(exam);
         return ResponseEntity.noContent().build();
@@ -81,6 +106,10 @@ public class AdminExamController {
         e.setRegistrationStart(req.registrationStart());
         e.setRegistrationEnd(req.registrationEnd());
         e.setDescription(req.description());
-        e.setActive(req.isActive() == null ? true : req.isActive());
+        e.setExamInfoLocation(req.examInfoLocation());
+        e.setExamInfoStartTime(req.examInfoStartTime());
+        e.setExamInfoMethod(req.examInfoMethod());
+        e.setExamInfoDurationMinutes(req.examInfoDurationMinutes());
+        e.setActive(req.isActive() == null || req.isActive());
     }
 }

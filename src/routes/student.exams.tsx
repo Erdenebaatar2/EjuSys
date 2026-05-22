@@ -1,29 +1,53 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, type ComponentType } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { apiGet } from "@/lib/api";
-import { useLang } from "../contexts/LangContext";
-import { Card, CardContent } from "@/components/ui/card";
+import { useLang } from "@/contexts/LangContext";
+import type { Lang } from "@/lib/i18n";
+import {
+  StudentEmptyState,
+  StudentMetricCard,
+  StudentPageHeader,
+  StudentPanel,
+} from "@/components/student/StudentPage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Calendar,
-  MapPin,
-  Users,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertCircle,
   ArrowRight,
-  Loader2,
-  Clock,
+  CalendarDays,
   CalendarSearch,
   CheckCircle2,
-  AlertCircle,
+  ClipboardList,
+  Clock3,
+  Info,
+  Loader2,
+  MapPin,
+  Timer,
+  Users,
 } from "lucide-react";
 import { formatDate, isRegistrationOpen, sessionLabel } from "@/lib/eju-format";
 import { ExamRegistrationSheet, type ExamInfo } from "@/components/ExamRegistrationSheet";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/student/exams")({
-  head: () => ({ meta: [{ title: "Идэвхтэй шалгалтууд | EJU" }] }),
+  head: () => ({ meta: [{ title: "Шалгалтын мэдээлэл | EJU" }] }),
   component: StudentExams,
 });
+
+interface ExistingApplication {
+  id: string;
+  applicationNumber?: string | null;
+  status?: string | null;
+  paymentStatus?: string | null;
+}
 
 interface Exam {
   id: string;
@@ -37,19 +61,44 @@ interface Exam {
   session: "FIRST" | "SECOND";
   year: number;
   active: boolean;
+  examInfoLocation?: string | null;
+  examInfoStartTime?: string | null;
+  examInfoMethod?: string | null;
+  examInfoDurationMinutes?: number | null;
+  existingApplication?: ExistingApplication | null;
+}
+
+interface StudentApplication {
+  id: string;
+  applicationNumber?: string | null;
+  status?: string | null;
+  paymentStatus?: string | null;
+  exam?: {
+    id?: string | null;
+    name?: string | null;
+    examDate?: string | null;
+  } | null;
 }
 
 function StudentExams() {
-  const { lang } = useLang();
+  const { lang }: { lang: Lang } = useLang();
   const [selectedExam, setSelectedExam] = useState<ExamInfo | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [infoExam, setInfoExam] = useState<Exam | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
 
-  const { data: exams = [], isLoading } = useQuery({
+  const { data: exams = [], isLoading: examsLoading } = useQuery({
     queryKey: ["student", "exams"],
     queryFn: () => apiGet<Exam[]>("/api/student/exams"),
   });
 
+  const { data: application, isLoading: applicationLoading } = useQuery({
+    queryKey: ["student", "application"],
+    queryFn: () => apiGet<StudentApplication | undefined>("/api/student/application"),
+  });
+
   function openRegistration(exam: Exam) {
+    if (exam.existingApplication) return;
     setSelectedExam({
       id: exam.id,
       name: exam.name,
@@ -62,7 +111,12 @@ function StudentExams() {
     setSheetOpen(true);
   }
 
-  if (isLoading) {
+  function openInfo(exam: Exam) {
+    setInfoExam(exam);
+    setInfoOpen(true);
+  }
+
+  if (examsLoading || applicationLoading) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -70,229 +124,427 @@ function StudentExams() {
     );
   }
 
-  const openExams = exams.filter((e) =>
-    isRegistrationOpen(e.registrationStart, e.registrationEnd),
+  const examsWithApplication = exams.map((exam) => {
+    if (!application || exam.existingApplication || !isSameApplicationExam(application, exam)) {
+      return exam;
+    }
+
+    return {
+      ...exam,
+      existingApplication: {
+        id: application.id,
+        applicationNumber: application.applicationNumber,
+        status: application.status,
+        paymentStatus: application.paymentStatus,
+      },
+    };
+  });
+
+  const openExams = examsWithApplication.filter((exam) =>
+    isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
   );
-  const closedExams = exams.filter(
-    (e) => !isRegistrationOpen(e.registrationStart, e.registrationEnd),
+  const closedExams = examsWithApplication.filter(
+    (exam) => !isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
   );
+  const registeredCount = examsWithApplication.filter((exam) => exam.existingApplication).length;
+  const availableSeats = openExams.reduce((sum, exam) => sum + exam.availableSeats, 0);
 
   return (
-    <div className="max-w-5xl space-y-8">
-      {/* Page header */}
-      <div>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary/60 mb-1.5">
-          <CalendarSearch className="h-3.5 w-3.5" />
-          {lang === "mn" ? "EJU шалгалтууд" : "EJU exams"}
-        </div>
-        <h1 className="text-3xl font-bold text-foreground">
-          {lang === "mn" ? "Идэвхтэй Шалгалтууд" : "Active Exams"}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground max-w-xl">
-          {lang === "mn"
-            ? "Шалгалтыг сонгоод бүртгэлийн маягтаа бөглөнө үү. Бүртгэл нээлттэй байх хугацаанд бүртгүүлэх боломжтой."
-            : "Select an exam and fill in the registration form. You can register while the registration window is open."}
-        </p>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <StudentPageHeader
+        icon={CalendarSearch}
+        eyebrow="EJU"
+        title={lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}
+        description={
+          lang === "mn"
+            ? "Шалгалтын огноо, байршил, бүртгэлийн хугацаа болон суудлын мэдээлэл."
+            : "Exam date, location, registration window, and seat availability."
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StudentMetricCard
+          icon={CheckCircle2}
+          label={lang === "mn" ? "Бүртгэл нээлттэй" : "Open exams"}
+          value={openExams.length}
+          tone="emerald"
+        />
+        <StudentMetricCard
+          icon={Users}
+          label={lang === "mn" ? "Сул суудал" : "Available seats"}
+          value={availableSeats}
+          tone="blue"
+        />
+        <StudentMetricCard
+          icon={ClipboardList}
+          label={lang === "mn" ? "Миний бүртгэл" : "Registered"}
+          value={registeredCount}
+          tone="teal"
+        />
+        <StudentMetricCard
+          icon={AlertCircle}
+          label={lang === "mn" ? "Хаалттай" : "Closed"}
+          value={closedExams.length}
+          tone="amber"
+        />
       </div>
 
       {exams.length === 0 ? (
-        <Card className="shadow-card border-dashed">
-          <CardContent className="py-16 text-center space-y-3">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <CalendarSearch className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              {lang === "mn" ? "Нээлттэй шалгалт байхгүй" : "No exams available"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {lang === "mn"
-                ? "Одоогоор шалгалт байхгүй байна. Дараа шалгана уу."
-                : "There are no exams at the moment. Please check back later."}
-            </p>
-          </CardContent>
-        </Card>
+        <StudentPanel>
+          <StudentEmptyState>
+            {lang === "mn"
+              ? "Одоогоор шалгалтын мэдээлэл ороогүй байна."
+              : "There is no exam information at the moment. Please check back later."}
+          </StudentEmptyState>
+        </StudentPanel>
       ) : (
         <>
-          {/* Open exams */}
-          {openExams.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <h2 className="text-sm font-semibold text-foreground">
-                  {lang === "mn" ? "Бүртгэл нээлттэй" : "Registration open"}
-                  <span className="ml-2 text-muted-foreground font-normal">
-                    ({openExams.length})
-                  </span>
-                </h2>
-              </div>
+          <StudentPanel
+            title={lang === "mn" ? "Бүртгэл нээлттэй" : "Registration open"}
+            description={
+              lang === "mn"
+                ? "Одоогоор бүртгэл авч буй шалгалтууд."
+                : "Exams currently accepting applications."
+            }
+          >
+            {openExams.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
-                {openExams.map((e) => (
+                {openExams.map((exam) => (
                   <ExamCard
-                    key={e.id}
-                    exam={e}
+                    key={exam.id}
+                    exam={exam}
                     lang={lang}
-                    onRegister={() => openRegistration(e)}
+                    onRegister={() => openRegistration(exam)}
+                    onViewInfo={() => openInfo(exam)}
                   />
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <StudentEmptyState>
+                {lang === "mn"
+                  ? "Одоогоор нээлттэй шалгалт алга."
+                  : "There are no open exams right now."}
+              </StudentEmptyState>
+            )}
+          </StudentPanel>
 
-          {/* Closed exams */}
           {closedExams.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                <h2 className="text-sm font-semibold text-muted-foreground">
-                  {lang === "mn" ? "Бүртгэл хаалттай" : "Registration closed"}
-                  <span className="ml-2 font-normal">({closedExams.length})</span>
-                </h2>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 opacity-70">
-                {closedExams.map((e) => (
+            <StudentPanel
+              title={lang === "mn" ? "Бүртгэл хаалттай" : "Registration closed"}
+              description={
+                lang === "mn"
+                  ? "Өмнөх болон бүртгэл хаагдсан шалгалтууд."
+                  : "Past or closed registration periods."
+              }
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                {closedExams.map((exam) => (
                   <ExamCard
-                    key={e.id}
-                    exam={e}
+                    key={exam.id}
+                    exam={exam}
                     lang={lang}
-                    onRegister={() => openRegistration(e)}
+                    muted
+                    onRegister={() => openRegistration(exam)}
+                    onViewInfo={() => openInfo(exam)}
                   />
                 ))}
               </div>
-            </div>
+            </StudentPanel>
           )}
         </>
       )}
 
-      {/* Registration slide-over */}
       <ExamRegistrationSheet
         exam={selectedExam}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
       />
+      <ExamInfoDialog
+        exam={infoExam}
+        lang={lang}
+        open={infoOpen}
+        onOpenChange={(nextOpen) => {
+          setInfoOpen(nextOpen);
+          if (!nextOpen) setInfoExam(null);
+        }}
+      />
     </div>
   );
 }
 
-/* ─── Exam card ──────────────────────────────────────────────────── */
 function ExamCard({
   exam,
   lang,
+  muted = false,
   onRegister,
+  onViewInfo,
 }: {
   exam: Exam;
-  lang: string;
+  lang: Lang;
+  muted?: boolean;
   onRegister: () => void;
+  onViewInfo: () => void;
 }) {
   const open = isRegistrationOpen(exam.registrationStart, exam.registrationEnd);
+  const existingApplication = exam.existingApplication;
+  const isRegistered = Boolean(existingApplication);
+  const canRegister = open && !isRegistered;
   const seatsLeft = exam.availableSeats;
   const fillPct = Math.min(100, ((exam.totalSeats - seatsLeft) / exam.totalSeats) * 100);
   const almostFull = seatsLeft < exam.totalSeats * 0.2;
 
   return (
-    <Card
-      className={`overflow-hidden shadow-card transition-all duration-200 hover:shadow-elegant ${
-        open ? "cursor-pointer hover:-translate-y-0.5" : ""
-      }`}
-      onClick={open ? onRegister : undefined}
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-card shadow-card transition-all duration-200",
+        canRegister && "cursor-pointer hover:-translate-y-0.5 hover:shadow-elegant",
+        muted && "opacity-75",
+      )}
+      onClick={canRegister ? onRegister : undefined}
     >
-      {/* Top accent */}
-      <div
-        className={`h-1 w-full ${
-          open
-            ? "bg-gradient-to-r from-primary to-[oklch(0.55_0.18_280)]"
-            : "bg-muted"
-        }`}
-      />
-
-      <CardContent className="p-5 space-y-4">
-        {/* Header */}
+      <div className={cn("h-1", open ? "bg-primary" : "bg-muted")} />
+      <div className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="font-semibold text-base leading-tight text-foreground">{exam.name}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="truncate text-base font-semibold text-foreground">{exam.name}</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {sessionLabel(exam.session.toLowerCase() as "first" | "second", lang)} · {exam.year}
             </p>
           </div>
-          <Badge
-            className={`shrink-0 text-[11px] font-semibold border ${
-              open
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-muted text-muted-foreground border-border"
-            }`}
-            variant="outline"
-          >
-            {open
-              ? lang === "mn" ? "✓ Нээлттэй" : "✓ Open"
-              : lang === "mn" ? "Хаалттай" : "Closed"}
-          </Badge>
+          <ExamStatusBadge open={open} registered={isRegistered} lang={lang} />
         </div>
 
-        {/* Info */}
-        <div className="space-y-1.5 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-3.5 w-3.5 shrink-0" />
-            <span>{formatDate(exam.examDate, lang)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{exam.location}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 shrink-0" />
-            <span>
-              {lang === "mn" ? "Дуусах:" : "Closes:"}{" "}
-              <span className="font-medium text-foreground">
-                {formatDate(exam.registrationEnd, lang)}
-              </span>
-            </span>
-          </div>
+        <div className="grid gap-2 text-sm text-muted-foreground">
+          <IconLine icon={CalendarDays} text={formatDate(exam.examDate, lang)} />
+          <IconLine icon={MapPin} text={exam.location} />
+          <IconLine
+            icon={Clock3}
+            text={`${lang === "mn" ? "Дуусах:" : "Closes:"} ${formatDate(
+              exam.registrationEnd,
+              lang,
+            )}`}
+          />
         </div>
 
-        {/* Seats bar */}
-        <div className="space-y-1">
+        <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
           <div className="flex justify-between text-xs">
             <span className="flex items-center gap-1 text-muted-foreground">
               <Users className="h-3 w-3" />
               {lang === "mn" ? "Суудал" : "Seats"}
             </span>
-            <span className={`font-medium ${almostFull ? "text-rose-600" : "text-foreground"}`}>
+            <span className={cn("font-medium", almostFull ? "text-rose-600" : "text-foreground")}>
               {seatsLeft}/{exam.totalSeats}
             </span>
           </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="h-2 overflow-hidden rounded-full bg-background">
             <div
-              className={`h-full rounded-full transition-all ${
-                almostFull ? "bg-rose-500" : fillPct > 60 ? "bg-amber-500" : "bg-primary"
-              }`}
+              className={cn(
+                "h-full rounded-full transition-all",
+                almostFull ? "bg-rose-500" : fillPct > 60 ? "bg-amber-500" : "bg-primary",
+              )}
               style={{ width: `${fillPct}%` }}
             />
           </div>
         </div>
 
-        {/* Divider + CTA */}
-        <div className="border-t border-border pt-3">
+        {isRegistered && (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span className="font-semibold">{lang === "mn" ? "Бүртгэгдсэн" : "Registered"}</span>
+            {existingApplication?.applicationNumber && (
+              <span className="ml-auto min-w-0 truncate font-mono text-xs text-emerald-700">
+                {existingApplication.applicationNumber}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="grid gap-2 border-t pt-4 sm:grid-cols-2">
           <Button
-            className={`w-full font-semibold text-sm transition-all ${
-              open
-                ? "bg-gradient-to-r from-primary to-[oklch(0.45_0.16_280)] hover:opacity-90 shadow-soft text-white"
-                : "cursor-not-allowed"
-            }`}
-            disabled={!open}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (open) onRegister();
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={(event) => {
+              event.stopPropagation();
+              onViewInfo();
             }}
           >
-            {lang === "mn" ? "Бүртгүүлэх" : "Register"}
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <Info className="h-4 w-4" />
+            {lang === "mn" ? "Мэдээлэл" : "Info"}
           </Button>
-          {open && (
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              {lang === "mn" ? "Дарж бүртгэлийн маягтыг нэмэ үү" : "Click to open registration form"}
-            </p>
+          {isRegistered ? (
+            <Button
+              asChild
+              variant="outline"
+              className="w-full border-emerald-200 bg-emerald-50 text-emerald-700"
+            >
+              <Link to="/student/applications" onClick={(event) => event.stopPropagation()}>
+                <CheckCircle2 className="h-4 w-4" />
+                {lang === "mn" ? "Бүртгэл" : "Application"}
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              disabled={!open}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (open) onRegister();
+              }}
+            >
+              {lang === "mn" ? "Бүртгүүлэх" : "Register"}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+}
+
+function ExamStatusBadge({
+  open,
+  registered,
+  lang,
+}: {
+  open: boolean;
+  registered: boolean;
+  lang: Lang;
+}) {
+  const label = registered
+    ? lang === "mn"
+      ? "Бүртгэгдсэн"
+      : "Registered"
+    : open
+      ? lang === "mn"
+        ? "Нээлттэй"
+        : "Open"
+      : lang === "mn"
+        ? "Хаалттай"
+        : "Closed";
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "shrink-0",
+        registered || open
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "bg-muted text-muted-foreground",
+      )}
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function IconLine({
+  icon: Icon,
+  text,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{text}</span>
+    </div>
+  );
+}
+
+function ExamInfoDialog({
+  exam,
+  lang,
+  open,
+  onOpenChange,
+}: {
+  exam: Exam | null;
+  lang: Lang;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!exam) return null;
+
+  const rows = [
+    {
+      icon: MapPin,
+      label: lang === "mn" ? "Шалгалт авах газар" : "Exam venue",
+      value: exam.examInfoLocation,
+    },
+    {
+      icon: Clock3,
+      label: lang === "mn" ? "Эхлэх цаг" : "Start time",
+      value: exam.examInfoStartTime ? exam.examInfoStartTime.slice(0, 5) : "",
+    },
+    {
+      icon: ClipboardList,
+      label: lang === "mn" ? "Хэрхэн авах" : "Method",
+      value: exam.examInfoMethod,
+    },
+    {
+      icon: Timer,
+      label: lang === "mn" ? "Хугацаа" : "Duration",
+      value:
+        exam.examInfoDurationMinutes == null
+          ? ""
+          : lang === "mn"
+            ? `${exam.examInfoDurationMinutes} минут`
+            : `${exam.examInfoDurationMinutes} minutes`,
+    },
+  ].filter((row) => row.value && row.value.trim().length > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}</DialogTitle>
+          <DialogDescription>
+            {exam.name} · {exam.year} ·{" "}
+            {sessionLabel(exam.session.toLowerCase() as "first" | "second", lang)}
+          </DialogDescription>
+        </DialogHeader>
+
+        {rows.length > 0 ? (
+          <div className="grid gap-3">
+            {rows.map((row) => {
+              const Icon = row.icon;
+              return (
+                <div key={row.label} className="flex gap-3 rounded-lg border bg-muted/20 p-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {row.label}
+                    </p>
+                    <p className="mt-1 whitespace-pre-line break-words text-sm font-medium text-foreground">
+                      {row.value}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <StudentEmptyState>
+            {lang === "mn"
+              ? "Одоогоор мэдээлэл ороогүй байна."
+              : "No information has been entered yet."}
+          </StudentEmptyState>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function isSameApplicationExam(application: StudentApplication | undefined, exam: Exam): boolean {
+  if (!application?.exam) return false;
+  if (application.exam.id && application.exam.id === exam.id) return true;
+
+  return (
+    application.exam.name === exam.name &&
+    application.exam.examDate != null &&
+    String(application.exam.examDate) === exam.examDate
   );
 }

@@ -2,14 +2,17 @@ package com.eju.auth.admin;
 
 import com.eju.auth.application.Application;
 import com.eju.auth.application.ApplicationRepository;
+import com.eju.auth.application.ApplicationSubjectRepository;
 import com.eju.auth.exam.Exam;
 import com.eju.auth.exam.ExamRepository;
+import com.eju.auth.payment.PaymentRepository;
 import com.eju.auth.profile.Profile;
 import com.eju.auth.profile.ProfileRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -26,13 +29,19 @@ import java.util.UUID;
 public class AdminApplicationController {
 
     private final ApplicationRepository appRepo;
+    private final ApplicationSubjectRepository appSubjectRepo;
+    private final PaymentRepository paymentRepo;
     private final ProfileRepository profileRepo;
     private final ExamRepository examRepo;
 
     public AdminApplicationController(ApplicationRepository appRepo,
+                                      ApplicationSubjectRepository appSubjectRepo,
+                                      PaymentRepository paymentRepo,
                                       ProfileRepository profileRepo,
                                       ExamRepository examRepo) {
         this.appRepo = appRepo;
+        this.appSubjectRepo = appSubjectRepo;
+        this.paymentRepo = paymentRepo;
         this.profileRepo = profileRepo;
         this.examRepo = examRepo;
     }
@@ -63,7 +72,7 @@ public class AdminApplicationController {
             searchUuid = null;
         }
 
-        Page<Application> result = appRepo.search(st, ps, examId, from, to, searchUuid,
+        Page<Application> result = appRepo.search(st, ps, examId, true, from, to, searchUuid,
                 (search == null || search.isBlank()) ? null : search,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
 
@@ -125,6 +134,23 @@ public class AdminApplicationController {
             a.setPaymentStatus(Application.PaymentStatus.valueOf(body.status().toUpperCase()));
             appRepo.save(a);
             return ResponseEntity.ok(enrich(a));
+        }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> delete(@PathVariable UUID id) {
+        return appRepo.findById(id).<ResponseEntity<?>>map(a -> {
+            if (a.getStatus() == Application.Status.APPROVED) {
+                examRepo.findById(a.getExamId()).ifPresent(ex -> {
+                    ex.setAvailableSeats(ex.getAvailableSeats() + 1);
+                    examRepo.save(ex);
+                });
+            }
+            paymentRepo.deleteByApplicationId(id);
+            appSubjectRepo.deleteByIdApplicationId(id);
+            appRepo.delete(a);
+            return ResponseEntity.noContent().build();
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 

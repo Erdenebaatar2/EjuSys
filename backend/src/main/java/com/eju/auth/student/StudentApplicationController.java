@@ -1,6 +1,7 @@
 package com.eju.auth.student;
 
 import com.eju.auth.application.Application;
+import com.eju.auth.application.ApplicationNumberService;
 import com.eju.auth.application.ApplicationRepository;
 import com.eju.auth.exam.Exam;
 import com.eju.auth.exam.ExamRepository;
@@ -23,16 +24,20 @@ public class StudentApplicationController {
     private final ApplicationRepository appRepo;
     private final ExamRepository examRepo;
     private final ProfileRepository profileRepo;
+    private final ApplicationNumberService applicationNumberService;
 
     public StudentApplicationController(ApplicationRepository appRepo,
                                         ExamRepository examRepo,
-                                        ProfileRepository profileRepo) {
+                                        ProfileRepository profileRepo,
+                                        ApplicationNumberService applicationNumberService) {
         this.appRepo = appRepo;
         this.examRepo = examRepo;
         this.profileRepo = profileRepo;
+        this.applicationNumberService = applicationNumberService;
     }
 
     public record ApplicationPayload(
+            UUID examId,
             String photoUrl,
             String nameAlphabet,
             String nameKanji,
@@ -59,9 +64,14 @@ public class StudentApplicationController {
     ) {}
 
     @GetMapping
-    public ResponseEntity<?> getMyApplication(Authentication auth) {
+    public ResponseEntity<?> getMyApplication(@RequestParam(required = false) UUID examId,
+                                              Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
-        return appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId)
+        Optional<Exam> exam = currentApplicationExam(examId);
+        if (exam.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return appRepo.findByUserIdAndExamId(userId, exam.get().getId())
                 .map(this::toDto)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
@@ -70,14 +80,14 @@ public class StudentApplicationController {
     @PostMapping
     public ResponseEntity<?> create(@RequestBody ApplicationPayload payload, Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
-        Optional<Exam> activeExam = activeExam();
+        Optional<Exam> activeExam = activeExam(payload.examId());
         if (activeExam.isEmpty()) {
-            String message = examRepo.findFirstByActiveTrue().isPresent()
+            String message = examRepo.findFirstByActiveTrueOrderByExamDateAsc().isPresent()
                     ? "Active exam registration is not open"
                     : "No active exam is available";
             return ResponseEntity.badRequest().body(Map.of("message", message));
         }
-        if (appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).isPresent()) {
+        if (appRepo.findByUserIdAndExamId(userId, activeExam.get().getId()).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Application already exists"));
         }
         String validationError = validatePayload(payload);
@@ -89,6 +99,7 @@ public class StudentApplicationController {
         app.setUserId(userId);
         app.setExamId(activeExam.get().getId());
         applyPayload(app, payload);
+        app.setApplicationNumber(applicationNumberService.nextNumber(activeExam.get(), app));
         app = appRepo.save(app);
         return ResponseEntity.ok(toDto(app));
     }
@@ -96,7 +107,11 @@ public class StudentApplicationController {
     @PatchMapping
     public ResponseEntity<?> update(@RequestBody ApplicationPayload payload, Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
-        Optional<Application> existing = appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId);
+        Optional<Exam> activeExam = activeExam(payload.examId());
+        if (activeExam.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Active exam registration is not open"));
+        }
+        Optional<Application> existing = appRepo.findByUserIdAndExamId(userId, activeExam.get().getId());
         if (existing.isEmpty()) return ResponseEntity.notFound().build();
 
         Application app = existing.get();
@@ -115,8 +130,23 @@ public class StudentApplicationController {
         return ResponseEntity.ok(toDto(app));
     }
 
-    private Optional<Exam> activeExam() {
-        return examRepo.findFirstRegistrationOpen(LocalDate.now());
+    private Optional<Exam> activeExam(UUID examId) {
+        LocalDate today = LocalDate.now();
+        Optional<Exam> exam = examId != null
+                ? examRepo.findById(examId)
+                : examRepo.findFirstRegistrationOpen(today);
+
+        return exam.filter(Exam::isActive)
+                .filter(e -> !e.getRegistrationEnd().isBefore(today));
+    }
+
+    private Optional<Exam> currentApplicationExam(UUID examId) {
+        if (examId != null) {
+            return examRepo.findById(examId).filter(Exam::isActive);
+        }
+        LocalDate today = LocalDate.now();
+        Optional<Exam> openExam = examRepo.findFirstRegistrationOpen(today);
+        return openExam.or(() -> examRepo.findFirstByActiveTrueOrderByExamDateAsc());
     }
 
     private String validatePayload(ApplicationPayload payload) {
@@ -133,9 +163,6 @@ public class StudentApplicationController {
         }
         if (subjectScience && (payload.scienceOption1() == null || payload.scienceOption1().isBlank())) {
             return "Science option is required";
-        }
-        if (subjectMathematics && (payload.mathCourse() == null || payload.mathCourse().isBlank())) {
-            return "Math course is required";
         }
         return null;
     }
@@ -162,7 +189,7 @@ public class StudentApplicationController {
         app.setSubjectMathematics(payload.subjectMathematics() != null && payload.subjectMathematics());
         app.setScienceOption1(parseScience(payload.scienceOption1()));
         app.setScienceOption2(parseScience(payload.scienceOption2()));
-        app.setMathCourse(parseMathCourse(payload.mathCourse()));
+        app.setMathCourse(null);
         app.setExamLanguage(parseExamLanguage(payload.examLanguage()));
         app.setJassoScholarshipApply(payload.jassoScholarshipApply() != null && payload.jassoScholarshipApply());
         app.setExamSite(parseExamSite(payload.examSite()));
@@ -198,7 +225,7 @@ public class StudentApplicationController {
         Map<String, Object> map = new HashMap<>();
         map.put("id", app.getId());
         map.put("applicationNumber", app.getApplicationNumber());
-        map.put("status", app.getStatus().name().toLowerCase());
+        map.put("status", displayStatus(app));
         map.put("paymentStatus", app.getPaymentStatus().name().toLowerCase());
         map.put("createdAt", app.getCreatedAt());
         map.put("updatedAt", app.getUpdatedAt());
@@ -231,6 +258,14 @@ public class StudentApplicationController {
         examRepo.findById(app.getExamId()).ifPresent(exam -> map.put("exam", examToMap(exam)));
 
         return map;
+    }
+
+    private String displayStatus(Application app) {
+        if (app.getPaymentStatus() == Application.PaymentStatus.UNPAID
+                && app.getStatus() == Application.Status.PENDING) {
+            return "pending_payment";
+        }
+        return app.getStatus().name().toLowerCase();
     }
 
     private Map<String, Object> profileToMap(Profile profile) {

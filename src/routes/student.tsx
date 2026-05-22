@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { LayoutDashboard, CalendarSearch, User } from "lucide-react";
+import { LayoutDashboard, CalendarSearch, FileText, User } from "lucide-react";
 
 export const Route = createFileRoute("/student")({
   component: StudentLayout,
@@ -19,10 +19,15 @@ function StudentLayout() {
         },
         {
           to: "/student/exams",
-          labelMn: "Идэвхтэй Шалгалтууд",
-          labelJa: "Active Exams",
+          labelMn: "Шалгалтын мэдээлэл",
+          labelJa: "Exam information",
           icon: CalendarSearch,
-          highlight: true,
+        },
+        {
+          to: "/student/applications",
+          labelMn: "Миний бүртгэл",
+          labelJa: "My application",
+          icon: FileText,
         },
         {
           to: "/student/profile",

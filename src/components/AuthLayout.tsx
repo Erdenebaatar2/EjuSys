@@ -37,7 +37,7 @@ export function AuthLayout({ children, title, subtitle, side }: AuthLayoutProps)
         {/* RIGHT — form */}
         <div className="flex flex-col items-center justify-center px-4 py-12 sm:px-8">
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-[var(--primary-glow)] shadow-[var(--shadow-glow)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary shadow-lg">
               <GraduationCap className="h-6 w-6 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold tracking-tight text-foreground">EJU</span>
@@ -67,8 +67,7 @@ function BrandShowcase() {
       </div>
 
       <div className="relative mb-8">
-        <div className="absolute inset-0 -z-10 rounded-[2.5rem] bg-gradient-to-br from-primary/30 to-[var(--primary-glow)]/30 blur-3xl" />
-        <div className="flex items-center gap-4 rounded-[2rem] bg-gradient-to-br from-primary to-[var(--primary-glow)] px-10 py-6 shadow-[var(--shadow-glow)]">
+        <div className="flex items-center gap-4 rounded-[2rem] bg-primary px-10 py-6 shadow-lg ring-1 ring-white/35">
           <SakuraIcon className="h-14 w-14 text-white" />
           <span className="text-6xl font-black tracking-tight text-white">EJU</span>
         </div>

@@ -60,7 +60,6 @@ const schema = z
     subjectMathematics: z.boolean().default(false),
     scienceOption1: z.enum(["PHYSICS", "CHEMISTRY", "BIOLOGY"]).optional(),
     scienceOption2: z.enum(["PHYSICS", "CHEMISTRY", "BIOLOGY"]).optional(),
-    mathCourse: z.enum(["COURSE1", "COURSE2"]).optional(),
     examLanguage: z.enum(["JAPANESE", "ENGLISH"]).optional(),
     jassoScholarshipApply: z.boolean().default(false),
     examSite: z
@@ -86,9 +85,6 @@ const schema = z
         path: ["scienceOption1"],
         message: "Science option is required",
       });
-    }
-    if (values.subjectMathematics && !values.mathCourse) {
-      ctx.addIssue({ code: "custom", path: ["mathCourse"], message: "Math course is required" });
     }
   });
 
@@ -128,7 +124,13 @@ type PaymentResponse = {
   qrImage: string | null;
   deeplinks: string;
   paidAt: string | null;
+  demo?: boolean;
 };
+
+function qrImageSrc(qrImage: string | null | undefined): string | undefined {
+  if (!qrImage) return undefined;
+  return qrImage.startsWith("data:") ? qrImage : `data:image/png;base64,${qrImage}`;
+}
 
 /* ═══════════════════════════════════════════════════
    QPay Modal — inline payment dialog
@@ -160,6 +162,16 @@ function QPayModal({
   const data: PaymentResponse | undefined =
     (qc.getQueryData(["payment", "qpay", applicationId]) as PaymentResponse | undefined) ??
     createMut.data;
+
+  const demoCompleteMut = useMutation({
+    mutationFn: () =>
+      apiPost<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay/demo-complete`),
+    onSuccess: (paid) => {
+      qc.setQueryData(["payment", "qpay", applicationId], paid);
+      void qc.invalidateQueries({ queryKey: ["student", "application"] });
+      void qc.invalidateQueries({ queryKey: ["student", "applications"] });
+    },
+  });
 
   const isPaid = data?.status === "PAID";
 
@@ -231,8 +243,8 @@ function QPayModal({
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
               {lang === "mn"
-                ? "Таны бүртгэл админы баталгаажуулалт хүлээж байна."
-                : "Your application is waiting for admin approval."}
+                ? "Таны бүртгэл төлбөрөөр шууд баталгаажлаа."
+                : "Your application has been confirmed by payment."}
             </p>
             {data?.senderInvoiceNo && (
               <p className="text-xs text-muted-foreground font-mono">{data.senderInvoiceNo}</p>
@@ -292,7 +304,7 @@ function QPayModal({
             <div className="flex justify-center">
               {data?.qrImage ? (
                 <img
-                  src={`data:image/png;base64,${data.qrImage}`}
+                  src={qrImageSrc(data.qrImage)}
                   alt="QPay QR"
                   className="h-56 w-56 rounded-xl border bg-white p-2 shadow-sm"
                 />
@@ -311,10 +323,24 @@ function QPayModal({
             {/* waiting indicator */}
             <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-2.5 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {lang === "mn"
-                ? "Төлбөр төлөгдөхийг хүлээж байна..."
-                : "Waiting for payment confirmation..."}
+              {data?.demo
+                ? lang === "mn"
+                  ? "Demo QPay горим идэвхтэй."
+                  : "Demo QPay mode is active."
+                : lang === "mn"
+                  ? "Төлбөр төлөгдөхийг хүлээж байна..."
+                  : "Waiting for payment confirmation..."}
             </div>
+            {data?.demo && (
+              <Button
+                className="w-full"
+                onClick={() => demoCompleteMut.mutate()}
+                disabled={demoCompleteMut.isPending}
+              >
+                {demoCompleteMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {lang === "mn" ? "Demo төлбөр дуусгах" : "Complete demo payment"}
+              </Button>
+            )}
 
             {/* deeplink bank buttons */}
             {deeplinks.length > 0 && (
@@ -413,7 +439,6 @@ function StudentApplicationPage() {
       subjectMathematics: false,
       scienceOption1: undefined,
       scienceOption2: undefined,
-      mathCourse: undefined,
       examLanguage: "JAPANESE",
       jassoScholarshipApply: false,
       examSite: undefined,
@@ -443,7 +468,6 @@ function StudentApplicationPage() {
       subjectMathematics: !!app.subjectMathematics,
       scienceOption1: app.scienceOption1,
       scienceOption2: app.scienceOption2,
-      mathCourse: app.mathCourse,
       examLanguage: app.examLanguage,
       jassoScholarshipApply: !!app.jassoScholarshipApply,
       examSite: app.examSite,
@@ -463,7 +487,7 @@ function StudentApplicationPage() {
 
   const saveMut = useMutation({
     mutationFn: async (values: FormValues) => {
-      const payload = schema.parse(values);
+      const payload = { ...schema.parse(values), examId: examQuery.data?.id };
       if (appQuery.data?.id)
         return apiPatch<ApplicationResponse>("/api/student/application", payload);
       return apiPost<ApplicationResponse>("/api/student/application", payload);
@@ -540,8 +564,8 @@ function StudentApplicationPage() {
             <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
               <p className="text-sm">
                 {lang === "mn"
-                  ? "Таны бүртгэл хадгалагдсан. Төлбөрөө төлснөөр админ руу илгээгдэнэ."
-                  : "Application saved. Pay the fee to submit it for admin review."}
+                  ? "Таны бүртгэл хадгалагдсан. Төлбөрөө төлснөөр шууд баталгаажна."
+                  : "Application saved. Pay the fee to confirm it immediately."}
               </p>
               <Button type="button" onClick={() => setQpayAppId(appQuery.data!.id)}>
                 {lang === "mn" ? "QPay-ээр төлөх" : "Pay with QPay"}
@@ -590,6 +614,11 @@ function StudentApplicationPage() {
             </div>
             <Field label={lang === "mn" ? "Нэр (ALPHABET)" : "Name (ALPHABET)"}>
               <Input {...form.register("nameAlphabet")} disabled={isReadonly} />
+              <p className="text-xs text-muted-foreground">
+                {lang === "mn"
+                  ? "Гадаад паспорт дээрх нэрээ латин үсгээр бичнэ үү."
+                  : "Enter your name in Latin letters exactly as shown on your passport."}
+              </p>
             </Field>
             <Field label={lang === "mn" ? "Нэр (Kanji, optional)" : "Name (Kanji, optional)"}>
               <Input {...form.register("nameKanji")} disabled={isReadonly} />
@@ -713,20 +742,6 @@ function StudentApplicationPage() {
               label={lang === "mn" ? "Математик" : "Mathematics"}
               disabled={isReadonly}
             />
-            {form.watch("subjectMathematics") && (
-              <div className="pl-6">
-                <SelectField
-                  label={lang === "mn" ? "Математикийн курс" : "Math course"}
-                  value={form.watch("mathCourse")}
-                  onChange={(v) => form.setValue("mathCourse", v as FormValues["mathCourse"])}
-                  options={[
-                    { value: "COURSE1", label: "Course 1" },
-                    { value: "COURSE2", label: "Course 2" },
-                  ]}
-                  disabled={isReadonly}
-                />
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -805,8 +820,8 @@ function StudentApplicationPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {isPaid
                   ? lang === "mn"
-                    ? "Төлбөр төлөгдсөн. Таны бүртгэл баталгаажиж админы хяналт руу илгээгдсэн."
-                    : "Payment has been received. Your application is confirmed and waiting for admin review."
+                    ? "Төлбөр төлөгдсөн. Таны бүртгэл шууд баталгаажсан."
+                    : "Payment has been received. Your application is confirmed."
                   : lang === "mn"
                     ? "Маягтаа хадгалсны дараа QPay2 QR болон банкны аппын сонголтууд нээгдэнэ. Төлбөр амжилттай төлөгдсөний дараа бүртгэл баталгаажна."
                     : "After saving the form, QPay2 QR and bank app options will open. The application is confirmed only after payment succeeds."}

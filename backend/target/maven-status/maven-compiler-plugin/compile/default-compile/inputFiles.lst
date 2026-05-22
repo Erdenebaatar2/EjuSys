@@ -24,10 +24,13 @@ C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\application\Appl
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\student\StudentApplicationController.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\application\ApplicationRepository.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\student\StudentExamController.java
+C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\application\ApplicationNumberService.java
+C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\config\ApiExceptionHandler.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\exam\Exam.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\profile\Profile.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\subject\Subject.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\payment\QPayClient.java
+C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\config\StaticResourceConfig.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\user\AdminController.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\payment\PaymentService.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\auth\JwtService.java

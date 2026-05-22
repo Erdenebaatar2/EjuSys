@@ -1,6 +1,7 @@
 package com.eju.auth.student;
 
 import com.eju.auth.application.ApplicationRepository;
+import com.eju.auth.application.Application;
 import com.eju.auth.exam.Exam;
 import com.eju.auth.exam.ExamRepository;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +31,7 @@ public class StudentExamController {
                 .map(e -> {
                     Map<String, Object> result = new HashMap<>(toMap(e));
                     appRepo.findByUserIdAndExamId(userId, e.getId()).ifPresent(a ->
-                            result.put("existingApplication", Map.of(
-                                    "id", a.getId(),
-                                    "applicationNumber", a.getApplicationNumber(),
-                                    "status", a.getStatus().name().toLowerCase()
-                            ))
+                            result.put("existingApplication", applicationSummary(a))
                     );
                     return ResponseEntity.ok(result);
                 })
@@ -42,12 +39,37 @@ public class StudentExamController {
     }
 
     @GetMapping("/exams")
-    public List<Map<String, Object>> getAvailableExams() {
+    public List<Map<String, Object>> getAvailableExams(Authentication auth) {
+        UUID userId = auth == null ? null : (UUID) auth.getPrincipal();
         LocalDate today = LocalDate.now();
         return examRepo.findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today)
                 .stream()
-                .map(this::toMap)
+                .map(e -> {
+                    Map<String, Object> result = new HashMap<>(toMap(e));
+                    if (userId != null) {
+                        appRepo.findByUserIdAndExamId(userId, e.getId())
+                                .ifPresent(a -> result.put("existingApplication", applicationSummary(a)));
+                    }
+                    return result;
+                })
                 .toList();
+    }
+
+    private Map<String, Object> applicationSummary(Application app) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", app.getId());
+        m.put("applicationNumber", app.getApplicationNumber());
+        m.put("status", displayStatus(app));
+        m.put("paymentStatus", app.getPaymentStatus().name().toLowerCase());
+        return m;
+    }
+
+    private String displayStatus(Application app) {
+        if (app.getPaymentStatus() == Application.PaymentStatus.UNPAID
+                && app.getStatus() == Application.Status.PENDING) {
+            return "pending_payment";
+        }
+        return app.getStatus().name().toLowerCase();
     }
 
     private Map<String, Object> toMap(Exam e) {
@@ -65,6 +87,10 @@ public class StudentExamController {
         m.put("active", e.isActive());
         m.put("isActive", e.isActive());
         m.put("description", e.getDescription());
+        m.put("examInfoLocation", e.getExamInfoLocation());
+        m.put("examInfoStartTime", e.getExamInfoStartTime() == null ? null : e.getExamInfoStartTime().toString());
+        m.put("examInfoMethod", e.getExamInfoMethod());
+        m.put("examInfoDurationMinutes", e.getExamInfoDurationMinutes());
         return m;
     }
 }

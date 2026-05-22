@@ -37,11 +37,13 @@ public class StudentDashboardController {
         LocalDate today = LocalDate.now();
         var activeExamOpt = examRepo.findFirstRegistrationOpen(today);
 
-        List<Application> apps = appRepo.findByUserId(userId);
+        List<Application> apps = appRepo.findActiveExamApplicationsByUserId(userId);
         long totalApps = apps.size();
         long pendingApps = apps.stream().filter(a -> a.getStatus() == Application.Status.PENDING).count();
         long approvedApps = apps.stream().filter(a -> a.getStatus() == Application.Status.APPROVED).count();
-        var latestApp = appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).orElse(null);
+        var currentExamApp = activeExamOpt
+                .flatMap(exam -> appRepo.findByUserIdAndExamId(userId, exam.getId()))
+                .orElse(null);
 
         String firstName = profileRepo.findById(userId)
                 .map(p -> p.getFirstName())
@@ -53,9 +55,9 @@ public class StudentDashboardController {
         response.put("pendingApps", pendingApps);
         response.put("approvedApps", approvedApps);
         response.put("openExams", activeExamOpt.isPresent() ? 1 : 0);
-        response.put("hasApplication", latestApp != null);
-        response.put("applicationStatus", latestApp == null ? null : latestApp.getStatus().name().toLowerCase());
-        response.put("applicationNumber", latestApp == null ? null : latestApp.getApplicationNumber());
+        response.put("hasApplication", currentExamApp != null);
+        response.put("applicationStatus", currentExamApp == null ? null : currentExamApp.getStatus().name().toLowerCase());
+        response.put("applicationNumber", currentExamApp == null ? null : currentExamApp.getApplicationNumber());
 
         activeExamOpt.ifPresent(exam -> response.put("activeExam", Map.of(
                 "id", exam.getId(),

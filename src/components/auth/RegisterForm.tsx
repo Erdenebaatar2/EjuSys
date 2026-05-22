@@ -143,7 +143,7 @@ export function RegisterForm() {
         <Button
           type="submit"
           disabled={submitting}
-          className="h-11 w-full rounded-xl bg-gradient-to-r from-primary to-[var(--primary-glow)] text-base font-semibold shadow-[var(--shadow-glow)] transition-all hover:shadow-[0_25px_70px_-15px_oklch(0.55_0.22_255_/_0.5)]"
+          className="h-11 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary/90"
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("register")}

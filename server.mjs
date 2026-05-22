@@ -8,6 +8,7 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const CLIENT_DIR = join(__dirname, "dist", "client");
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
+const API_TARGET = process.env.API_TARGET || "http://localhost:8080";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -97,8 +98,33 @@ async function writeWebResponse(webRes, res) {
   res.end();
 }
 
+async function tryProxyApi(req, res) {
+  const originalUrl = req.url || "/";
+  if (!originalUrl.startsWith("/api")) return false;
+
+  const targetUrl = new URL(originalUrl, API_TARGET);
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (k.toLowerCase() === "host") continue;
+    if (Array.isArray(v)) for (const vv of v) headers.append(k, vv);
+    else if (v != null) headers.set(k, v);
+  }
+
+  const method = req.method || "GET";
+  const init = { method, headers };
+  if (method !== "GET" && method !== "HEAD") {
+    init.body = req;
+    init.duplex = "half";
+  }
+
+  const apiRes = await fetch(targetUrl, init);
+  await writeWebResponse(apiRes, res);
+  return true;
+}
+
 const server = createServer(async (req, res) => {
   try {
+    if (await tryProxyApi(req, res)) return;
     if (await tryServeStatic(req, res)) return;
     const webReq = nodeReqToWebRequest(req);
     const webRes = await handler.fetch(webReq);

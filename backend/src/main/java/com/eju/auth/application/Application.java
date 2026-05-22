@@ -32,12 +32,12 @@ public class Application {
     @Column(name = "exam_id", nullable = false, columnDefinition = "uuid")
     private UUID examId;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.PENDING_PAYMENT;
+    @Convert(converter = StatusConverter.class)
+    private Status status = Status.PENDING;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
+    @Convert(converter = PaymentStatusConverter.class)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
     private String phone;
@@ -212,4 +212,30 @@ public class Application {
     public void setRejectionReason(String v) { this.rejectionReason = v; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    @Converter
+    public static class StatusConverter implements AttributeConverter<Status, String> {
+        @Override
+        public String convertToDatabaseColumn(Status attribute) {
+            return attribute == null ? null : attribute.name();
+        }
+
+        @Override
+        public Status convertToEntityAttribute(String dbData) {
+            return dbData == null ? null : Status.valueOf(dbData.toUpperCase());
+        }
+    }
+
+    @Converter
+    public static class PaymentStatusConverter implements AttributeConverter<PaymentStatus, String> {
+        @Override
+        public String convertToDatabaseColumn(PaymentStatus attribute) {
+            return attribute == null ? null : attribute.name();
+        }
+
+        @Override
+        public PaymentStatus convertToEntityAttribute(String dbData) {
+            return dbData == null ? null : PaymentStatus.valueOf(dbData.toUpperCase());
+        }
+    }
 }

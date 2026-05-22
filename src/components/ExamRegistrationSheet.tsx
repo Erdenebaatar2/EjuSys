@@ -71,7 +71,6 @@ const schema = z
     subjectMathematics: z.boolean().default(false),
     scienceOption1: z.enum(["PHYSICS", "CHEMISTRY", "BIOLOGY"]).optional(),
     scienceOption2: z.enum(["PHYSICS", "CHEMISTRY", "BIOLOGY"]).optional(),
-    mathCourse: z.enum(["COURSE1", "COURSE2"]).optional(),
     examLanguage: z.enum(["JAPANESE", "ENGLISH"]).optional(),
     jassoScholarshipApply: z.boolean().default(false),
     examSite: z
@@ -85,17 +84,49 @@ const schema = z
       !values.subjectJapanAndWorld &&
       !values.subjectMathematics
     ) {
-      ctx.addIssue({ code: "custom", path: ["subjectJapanese"], message: "At least one subject is required" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["subjectJapanese"],
+        message: "At least one subject is required",
+      });
     }
     if (values.subjectScience && !values.scienceOption1) {
-      ctx.addIssue({ code: "custom", path: ["scienceOption1"], message: "Science option is required" });
-    }
-    if (values.subjectMathematics && !values.mathCourse) {
-      ctx.addIssue({ code: "custom", path: ["mathCourse"], message: "Math course is required" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["scienceOption1"],
+        message: "Science option is required",
+      });
     }
   });
 
 type FormValues = z.input<typeof schema>;
+
+function defaultApplicationFormValues(): FormValues {
+  return {
+    photoUrl: "",
+    nameAlphabet: "",
+    nameKanji: "",
+    sex: undefined,
+    dateOfBirth: "",
+    nationality: "",
+    countryCode: "",
+    address: "",
+    postalCode: "",
+    addressCode: "",
+    telephone: "",
+    mobilePhone: "",
+    schoolOrOccupation: "",
+    subjectJapanese: true,
+    subjectScience: false,
+    subjectJapanAndWorld: false,
+    subjectMathematics: false,
+    scienceOption1: undefined,
+    scienceOption2: undefined,
+    examLanguage: "JAPANESE",
+    jassoScholarshipApply: false,
+    examSite: undefined,
+  };
+}
 
 /* ─── API types (unchanged) ─────────────────────────────────────────── */
 type ApplicationResponse = Partial<FormValues> & {
@@ -119,7 +150,13 @@ type PaymentResponse = {
   qrImage: string | null;
   deeplinks: string;
   paidAt: string | null;
+  demo?: boolean;
 };
+
+function qrImageSrc(qrImage: string | null | undefined): string | undefined {
+  if (!qrImage) return undefined;
+  return qrImage.startsWith("data:") ? qrImage : `data:image/png;base64,${qrImage}`;
+}
 
 /* ─── Exam info shape (passed in as prop) ───────────────────────────── */
 export interface ExamInfo {
@@ -163,6 +200,18 @@ function QPayDialog({
     (qc.getQueryData(["payment", "qpay", applicationId]) as PaymentResponse | undefined) ??
     createMut.data;
 
+  const demoCompleteMut = useMutation({
+    mutationFn: () =>
+      apiPost<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay/demo-complete`),
+    onSuccess: (paid) => {
+      qc.setQueryData(["payment", "qpay", applicationId], paid);
+      void qc.invalidateQueries({ queryKey: ["student", "application"] });
+      void qc.invalidateQueries({ queryKey: ["student", "applications"] });
+      void qc.invalidateQueries({ queryKey: ["student", "exams"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Demo payment failed"),
+  });
+
   const isPaid = data?.status === "PAID";
 
   useEffect(() => {
@@ -183,12 +232,15 @@ function QPayDialog({
         .fetchQuery({
           queryKey: ["payment", "qpay", applicationId],
           queryFn: () =>
-            apiGet<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay/status`),
+            apiGet<PaymentResponse>(
+              `/api/student/application/${applicationId}/payment/qpay/status`,
+            ),
         })
         .then((d) => {
           if (d.status === "PAID") {
             void qc.invalidateQueries({ queryKey: ["student", "application"] });
             void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+            void qc.invalidateQueries({ queryKey: ["student", "exams"] });
             onPaid();
           }
         })
@@ -202,11 +254,18 @@ function QPayDialog({
     try {
       const parsed: unknown = JSON.parse(data.deeplinks);
       return Array.isArray(parsed) ? (parsed as Deeplink[]) : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   }, [data?.deeplinks]);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-md w-full max-h-[90vh] overflow-y-auto">
         {isPaid ? (
           <div className="py-6 text-center space-y-4">
@@ -220,13 +279,15 @@ function QPayDialog({
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
               {lang === "mn"
-                ? "Таны бүртгэл админы баталгаажуулалт хүлээж байна."
-                : "Your application is waiting for admin approval."}
+                ? "Таны бүртгэл төлбөрөөр шууд баталгаажлаа."
+                : "Your application has been confirmed by payment."}
             </p>
             {data?.senderInvoiceNo && (
               <p className="text-xs font-mono text-muted-foreground">{data.senderInvoiceNo}</p>
             )}
-            <Button className="w-full" onClick={onPaid}>{lang === "mn" ? "Хаах" : "Close"}</Button>
+            <Button className="w-full" onClick={onPaid}>
+              {lang === "mn" ? "Хаах" : "Close"}
+            </Button>
           </div>
         ) : createMut.isPending && !data ? (
           <div className="py-10 text-center space-y-3">
@@ -273,7 +334,7 @@ function QPayDialog({
             <div className="flex justify-center">
               {data?.qrImage ? (
                 <img
-                  src={`data:image/png;base64,${data.qrImage}`}
+                  src={qrImageSrc(data.qrImage)}
                   alt="QPay QR"
                   className="h-56 w-56 rounded-xl border bg-white p-2 shadow-sm"
                 />
@@ -288,8 +349,24 @@ function QPayDialog({
             )}
             <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-2.5 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {lang === "mn" ? "Төлбөр хүлээж байна..." : "Waiting for payment confirmation..."}
+              {data?.demo
+                ? lang === "mn"
+                  ? "Demo QPay горим идэвхтэй."
+                  : "Demo QPay mode is active."
+                : lang === "mn"
+                  ? "Төлбөр хүлээж байна..."
+                  : "Waiting for payment confirmation..."}
             </div>
+            {data?.demo && (
+              <Button
+                className="w-full"
+                onClick={() => demoCompleteMut.mutate()}
+                disabled={demoCompleteMut.isPending}
+              >
+                {demoCompleteMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {lang === "mn" ? "Demo төлбөр дуусгах" : "Complete demo payment"}
+              </Button>
+            )}
             {deeplinks.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -302,10 +379,14 @@ function QPayDialog({
                       href={dl.link}
                       className="flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center text-[11px] transition-colors hover:bg-muted/50"
                     >
-                      {dl.logo
-                        ? <img src={dl.logo} alt={dl.name} className="h-9 w-9 rounded-lg" />
-                        : <div className="h-9 w-9 rounded-lg bg-muted" />}
-                      <span className="line-clamp-2 text-muted-foreground">{dl.description ?? dl.name}</span>
+                      {dl.logo ? (
+                        <img src={dl.logo} alt={dl.name} className="h-9 w-9 rounded-lg" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-lg bg-muted" />
+                      )}
+                      <span className="line-clamp-2 text-muted-foreground">
+                        {dl.description ?? dl.name}
+                      </span>
                     </a>
                   ))}
                 </div>
@@ -322,7 +403,9 @@ function QPayDialog({
                   qc.fetchQuery({
                     queryKey: ["payment", "qpay", applicationId],
                     queryFn: () =>
-                      apiGet<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay/status`),
+                      apiGet<PaymentResponse>(
+                        `/api/student/application/${applicationId}/payment/qpay/status`,
+                      ),
                   })
                 }
               >
@@ -357,43 +440,25 @@ export function ExamRegistrationSheet({
 
   /* ── same queries as student.application.tsx ── */
   const appQuery = useQuery({
-    queryKey: ["student", "application"],
-    queryFn: () => apiGet<ApplicationResponse | undefined>("/api/student/application"),
-    enabled: open,
+    queryKey: ["student", "application", exam?.id],
+    queryFn: () =>
+      apiGet<ApplicationResponse | undefined>(`/api/student/application?examId=${exam!.id}`),
+    enabled: open && Boolean(exam?.id),
   });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      photoUrl: "",
-      nameAlphabet: "",
-      nameKanji: "",
-      sex: undefined,
-      dateOfBirth: "",
-      nationality: "",
-      countryCode: "",
-      address: "",
-      postalCode: "",
-      addressCode: "",
-      telephone: "",
-      mobilePhone: "",
-      schoolOrOccupation: "",
-      subjectJapanese: true,
-      subjectScience: false,
-      subjectJapanAndWorld: false,
-      subjectMathematics: false,
-      scienceOption1: undefined,
-      scienceOption2: undefined,
-      mathCourse: undefined,
-      examLanguage: "JAPANESE",
-      jassoScholarshipApply: false,
-      examSite: undefined,
-    },
+    defaultValues: defaultApplicationFormValues(),
   });
 
   useEffect(() => {
+    if (!open || appQuery.isLoading) return;
     const app = appQuery.data;
-    if (!app) return;
+    if (!app) {
+      form.reset(defaultApplicationFormValues());
+      setPreview("");
+      return;
+    }
     form.reset({
       photoUrl: app.photoUrl ?? "",
       nameAlphabet: app.nameAlphabet ?? "",
@@ -414,13 +479,12 @@ export function ExamRegistrationSheet({
       subjectMathematics: !!app.subjectMathematics,
       scienceOption1: app.scienceOption1,
       scienceOption2: app.scienceOption2,
-      mathCourse: app.mathCourse,
       examLanguage: app.examLanguage,
       jassoScholarshipApply: !!app.jassoScholarshipApply,
       examSite: app.examSite,
     });
     setPreview(app.photoUrl ?? "");
-  }, [appQuery.data, form]);
+  }, [appQuery.data, appQuery.isLoading, exam?.id, form, open]);
 
   const uploadMut = useMutation({
     mutationFn: uploadPhoto,
@@ -434,7 +498,7 @@ export function ExamRegistrationSheet({
 
   const saveMut = useMutation({
     mutationFn: async (values: FormValues) => {
-      const payload = schema.parse(values);
+      const payload = { ...schema.parse(values), examId: exam?.id };
       if (appQuery.data?.id)
         return apiPatch<ApplicationResponse>("/api/student/application", payload);
       return apiPost<ApplicationResponse>("/api/student/application", payload);
@@ -443,8 +507,10 @@ export function ExamRegistrationSheet({
       toast.success(lang === "mn" ? "Бүртгэлийг хадгаллаа" : "Application saved");
       void qc.invalidateQueries({ queryKey: ["student", "application"] });
       void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+      void qc.invalidateQueries({ queryKey: ["student", "exams"] });
       if (data?.paymentStatus !== "paid") {
         setQpayAppId(data.id);
+        onClose();
       }
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
@@ -465,9 +531,35 @@ export function ExamRegistrationSheet({
     void navigate({ to: "/student/dashboard" });
   }, [onClose, navigate]);
 
+  const openQPay = useCallback(
+    (applicationId: string) => {
+      setQpayAppId(applicationId);
+      onClose();
+    },
+    [onClose],
+  );
+
+  const handleInvalidSubmit = useCallback(
+    (errors: Partial<Record<keyof FormValues, unknown>>) => {
+      const firstField = Object.keys(errors)[0] as keyof FormValues | undefined;
+      if (firstField) form.setFocus(firstField);
+      toast.error(
+        lang === "mn"
+          ? "Мэдээллээ бүрэн бөглөсний дараа QPay төлбөр нээгдэнэ."
+          : "Complete the required fields before opening QPay.",
+      );
+    },
+    [form, lang],
+  );
+
   return (
     <>
-      <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <Sheet
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) onClose();
+        }}
+      >
         <SheetContent
           side="right"
           className="w-full sm:max-w-2xl p-0 flex flex-col overflow-hidden"
@@ -482,7 +574,9 @@ export function ExamRegistrationSheet({
                     {exam?.name ?? (lang === "mn" ? "EJU Бүртгэл" : "EJU Registration")}
                   </SheetTitle>
                   <SheetDescription className="text-white/60 text-sm mt-0.5">
-                    {lang === "mn" ? "Бүртгэлийн маягт бөглөнө үү" : "Fill in the registration form"}
+                    {lang === "mn"
+                      ? "Бүртгэлийн маягт бөглөнө үү"
+                      : "Fill in the registration form"}
                   </SheetDescription>
                 </SheetHeader>
                 {exam && (
@@ -525,7 +619,7 @@ export function ExamRegistrationSheet({
                 <Button
                   size="sm"
                   className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={() => setQpayAppId(appQuery.data!.id)}
+                  onClick={() => openQPay(appQuery.data!.id)}
                 >
                   {lang === "mn" ? "QPay" : "Pay now"}
                 </Button>
@@ -544,10 +638,12 @@ export function ExamRegistrationSheet({
                 onSubmit={form.handleSubmit((values) => {
                   if (isReadonly) return;
                   saveMut.mutate(values);
-                })}
+                }, handleInvalidSubmit)}
               >
                 {/* ── Section 1: Personal info ── */}
-                <FormSection title={lang === "mn" ? "1. Хувийн мэдээлэл" : "1. Personal information"}>
+                <FormSection
+                  title={lang === "mn" ? "1. Хувийн мэдээлэл" : "1. Personal information"}
+                >
                   <div className="md:col-span-2">
                     <Label className="text-xs font-medium text-muted-foreground">
                       {lang === "mn" ? "Цээж зураг (jpg/png, 2MB)" : "Photo (jpg/png, 2MB)"}
@@ -578,7 +674,16 @@ export function ExamRegistrationSheet({
                   </div>
 
                   <F label={lang === "mn" ? "Нэр (ALPHABET)" : "Name (ALPHABET)"}>
-                    <Input {...form.register("nameAlphabet")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      {...form.register("nameAlphabet")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "mn"
+                        ? "Гадаад паспорт дээрх нэрээ латин үсгээр бичнэ үү."
+                        : "Enter your name in Latin letters exactly as shown on your passport."}
+                    </p>
                   </F>
                   <F label={lang === "mn" ? "Нэр (Kanji)" : "Name (Kanji, optional)"}>
                     <Input {...form.register("nameKanji")} disabled={isReadonly} className="h-9" />
@@ -600,17 +705,32 @@ export function ExamRegistrationSheet({
                     </RadioGroup>
                   </F>
                   <F label={lang === "mn" ? "Төрсөн огноо" : "Date of birth"}>
-                    <Input type="date" {...form.register("dateOfBirth")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      type="date"
+                      {...form.register("dateOfBirth")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
                   </F>
                 </FormSection>
 
                 {/* ── Section 2: Contact ── */}
-                <FormSection title={lang === "mn" ? "2. Хаяг ба холбоо барих" : "2. Contact & address"}>
+                <FormSection
+                  title={lang === "mn" ? "2. Хаяг ба холбоо барих" : "2. Contact & address"}
+                >
                   <F label={lang === "mn" ? "Иргэншил" : "Nationality"}>
-                    <Input {...form.register("nationality")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      {...form.register("nationality")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
                   </F>
                   <F label={lang === "mn" ? "Улсын код" : "Country code"}>
-                    <Input {...form.register("countryCode")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      {...form.register("countryCode")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
                   </F>
                   <div className="md:col-span-2">
                     <F label={lang === "mn" ? "Хаяг" : "Address"}>
@@ -621,17 +741,29 @@ export function ExamRegistrationSheet({
                     <Input {...form.register("postalCode")} disabled={isReadonly} className="h-9" />
                   </F>
                   <F label="Address code">
-                    <Input {...form.register("addressCode")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      {...form.register("addressCode")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
                   </F>
                   <F label={lang === "mn" ? "Утас" : "Telephone"}>
                     <Input {...form.register("telephone")} disabled={isReadonly} className="h-9" />
                   </F>
                   <F label={lang === "mn" ? "Гар утас" : "Mobile phone"}>
-                    <Input {...form.register("mobilePhone")} disabled={isReadonly} className="h-9" />
+                    <Input
+                      {...form.register("mobilePhone")}
+                      disabled={isReadonly}
+                      className="h-9"
+                    />
                   </F>
                   <div className="md:col-span-2">
                     <F label={lang === "mn" ? "Сургууль / Мэргэжил" : "School / Occupation"}>
-                      <Input {...form.register("schoolOrOccupation")} disabled={isReadonly} className="h-9" />
+                      <Input
+                        {...form.register("schoolOrOccupation")}
+                        disabled={isReadonly}
+                        className="h-9"
+                      />
                     </F>
                   </div>
                 </FormSection>
@@ -656,7 +788,9 @@ export function ExamRegistrationSheet({
                         <Sel
                           label="Science 1"
                           value={form.watch("scienceOption1")}
-                          onChange={(v) => form.setValue("scienceOption1", v as FormValues["scienceOption1"])}
+                          onChange={(v) =>
+                            form.setValue("scienceOption1", v as FormValues["scienceOption1"])
+                          }
                           options={[
                             { value: "PHYSICS", label: lang === "mn" ? "Физик" : "Physics" },
                             { value: "CHEMISTRY", label: lang === "mn" ? "Хими" : "Chemistry" },
@@ -667,7 +801,9 @@ export function ExamRegistrationSheet({
                         <Sel
                           label={lang === "mn" ? "Science 2 (optional)" : "Science 2 (optional)"}
                           value={form.watch("scienceOption2")}
-                          onChange={(v) => form.setValue("scienceOption2", v as FormValues["scienceOption2"])}
+                          onChange={(v) =>
+                            form.setValue("scienceOption2", v as FormValues["scienceOption2"])
+                          }
                           options={[
                             { value: "PHYSICS", label: lang === "mn" ? "Физик" : "Physics" },
                             { value: "CHEMISTRY", label: lang === "mn" ? "Хими" : "Chemistry" },
@@ -689,20 +825,6 @@ export function ExamRegistrationSheet({
                       label={lang === "mn" ? "Математик" : "Mathematics"}
                       disabled={isReadonly}
                     />
-                    {form.watch("subjectMathematics") && (
-                      <div className="pl-6">
-                        <Sel
-                          label={lang === "mn" ? "Математикийн курс" : "Math course"}
-                          value={form.watch("mathCourse")}
-                          onChange={(v) => form.setValue("mathCourse", v as FormValues["mathCourse"])}
-                          options={[
-                            { value: "COURSE1", label: "Course 1" },
-                            { value: "COURSE2", label: "Course 2" },
-                          ]}
-                          disabled={isReadonly}
-                        />
-                      </div>
-                    )}
                   </div>
                 </FormSection>
 
@@ -722,7 +844,9 @@ export function ExamRegistrationSheet({
                     <Check
                       checked={Boolean(form.watch("jassoScholarshipApply"))}
                       onCheckedChange={(v) => form.setValue("jassoScholarshipApply", !!v)}
-                      label={lang === "mn" ? "JASSO тэтгэлэгт хамрагдах" : "Apply for JASSO scholarship"}
+                      label={
+                        lang === "mn" ? "JASSO тэтгэлэгт хамрагдах" : "Apply for JASSO scholarship"
+                      }
                       disabled={isReadonly}
                     />
                   </div>
@@ -793,9 +917,7 @@ function FormSection({ title, children }: { title: string; children: React.React
       <CardHeader className="pb-3 pt-4 px-4">
         <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2 px-4 pb-4">
-        {children}
-      </CardContent>
+      <CardContent className="grid gap-3 md:grid-cols-2 px-4 pb-4">{children}</CardContent>
     </Card>
   );
 }
@@ -810,7 +932,10 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
 }
 
 function Check({
-  checked, onCheckedChange, label, disabled,
+  checked,
+  onCheckedChange,
+  label,
+  disabled,
 }: {
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
@@ -830,7 +955,11 @@ function Check({
 }
 
 function Sel({
-  label, value, onChange, options, disabled,
+  label,
+  value,
+  onChange,
+  options,
+  disabled,
 }: {
   label: string;
   value?: string;
@@ -847,7 +976,9 @@ function Sel({
         </SelectTrigger>
         <SelectContent>
           {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

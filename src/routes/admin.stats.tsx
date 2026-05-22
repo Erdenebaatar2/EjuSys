@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
@@ -14,8 +14,13 @@ import {
 } from "recharts";
 import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
-import { buildCsv, downloadCsv } from "@/lib/csv-export";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { downloadXlsx, type XlsxCell, type XlsxStyle, type XlsxValue } from "@/lib/xlsx-export";
+import {
+  AdminEmptyState,
+  AdminMetricCard,
+  AdminPageHeader,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,9 +30,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import {
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  Download,
+  Loader2,
+  PieChart as PieChartIcon,
+  XCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/admin/stats")({
-  head: () => ({ meta: [{ title: "Admin stats | EjuSys" }] }),
+  head: () => ({ meta: [{ title: "Админ - Тайлан | EJU" }] }),
   component: AdminStatsPage,
 });
 
@@ -65,7 +79,69 @@ type StatsResponse = {
   }>;
 };
 
-const PIE_COLORS = ["#0ea5e9", "#22c55e", "#f59e0b", "#8b5cf6", "#ef4444"];
+const PIE_COLORS = ["#2563eb", "#0891b2", "#16a34a", "#f59e0b", "#e11d48"];
+const APPLICATION_COLUMN_WIDTHS = [
+  4, 20, 26, 8, 13, 14, 14, 18, 12, 18, 14, 12, 10, 12, 24, 26, 26,
+];
+const CENTER_DATA_COLUMNS = new Set([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+
+function mark(value: unknown): string {
+  return value === true ? "O" : "";
+}
+
+function formatSex(value: unknown): string {
+  if (value === "MALE") return "M";
+  if (value === "FEMALE") return "F";
+  return "";
+}
+
+function formatBirthDate(value: unknown): string {
+  if (!value) return "";
+  return String(value).slice(0, 10).replaceAll("-", ".");
+}
+
+function normalizeEjuCode(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const normalized = String(value).trim().toUpperCase();
+  if (!normalized) return "";
+  if (/^[A-Z]{2}\d{2}$/.test(normalized)) return normalized;
+  if (["MONGOLIA", "MONGOL", "MN", "MNG", "MO"].includes(normalized)) return "AS10";
+
+  const legacyCodes: Record<string, string> = {
+    "2101": "AS10",
+  };
+  return legacyCodes[normalized] ?? normalized;
+}
+
+function formatCountryCode(value: unknown): string {
+  return normalizeEjuCode(value);
+}
+
+function formatAddressCode(addressCode: unknown, countryCode: unknown): string {
+  return normalizeEjuCode(addressCode) || normalizeEjuCode(countryCode);
+}
+
+function photoFilename(value: unknown): string {
+  if (!value) return "";
+  const normalized = String(value).replaceAll("\\", "/");
+  return normalized.split("/").filter(Boolean).pop() ?? normalized;
+}
+
+function renamedPhotoFilename(value: unknown): string {
+  const applicationNumber = value ? String(value) : "APP";
+  return `P${applicationNumber}.jpg`;
+}
+
+function styledCell(value: string, style: XlsxStyle): XlsxCell {
+  return { value, style };
+}
+
+function dataCell(value: XlsxValue, columnIndex: number): XlsxCell {
+  return {
+    value,
+    style: CENTER_DATA_COLUMNS.has(columnIndex) ? "center" : "text",
+  };
+}
 
 function AdminStatsPage() {
   const { lang } = useLang();
@@ -84,82 +160,129 @@ function AdminStatsPage() {
     },
   });
 
-  const approvedPct = useMemo(() => {
-    if (!data || data.kpi.totalApplications === 0) return 0;
-    return (data.kpi.approved * 100) / data.kpi.totalApplications;
-  }, [data]);
-  const pendingPct = useMemo(() => {
-    if (!data || data.kpi.totalApplications === 0) return 0;
-    return (data.kpi.pending * 100) / data.kpi.totalApplications;
-  }, [data]);
-  const rejectedPct = useMemo(() => {
-    if (!data || data.kpi.totalApplications === 0) return 0;
-    return (data.kpi.rejected * 100) / data.kpi.totalApplications;
-  }, [data]);
-
-  const exportApplicationCsv = () => {
+  const exportApplicationXlsx = () => {
     if (!data) return;
-    const csv = buildCsv(data.rows, [
-      { header: "受験番号", value: (r) => r.applicationNumber },
-      { header: "ローマ字氏名", value: (r) => r.nameAlphabet },
-      { header: "性別", value: (r) => r.sex },
-      { header: "生年月日", value: (r) => r.dateOfBirth },
-      { header: "国籍", value: (r) => r.countryCode },
-      { header: "住所", value: (r) => r.addressCode },
-      { header: "日本語科目", value: (r) => ((r.subjectJapanese as boolean) ? "O" : "") },
-      { header: "理科", value: (r) => ((r.subjectScience as boolean) ? "O" : "") },
-      { header: "総合科目", value: (r) => ((r.subjectJapanAndWorld as boolean) ? "O" : "") },
-      { header: "数学", value: (r) => ((r.subjectMathematics as boolean) ? "O" : "") },
-      { header: "日本語", value: (r) => ((r.examLanguage as string) === "JAPANESE" ? "O" : "") },
-      { header: "英語", value: (r) => ((r.examLanguage as string) === "ENGLISH" ? "O" : "") },
-      { header: "学習奨励費", value: (r) => ((r.jassoScholarshipApply as boolean) ? "Y" : "N") },
-      { header: "所属先", value: (r) => r.schoolOrOccupation },
-      { header: "OLDNAME", value: (r) => r.photoUrl },
-      { header: "NEWNAME", value: (r) => `${r.applicationNumber ?? "APP"}.jpg` },
-    ]);
-    downloadCsv("application-list.csv", csv);
-  };
-
-  const exportStudentCsv = () => {
-    if (!data) return;
-    const csv = buildCsv(data.students, [
-      { header: "ID", value: (r) => r.id },
-      { header: "First Name", value: (r) => r.firstName },
-      { header: "Last Name", value: (r) => r.lastName },
-      { header: "Email", value: (r) => r.email },
-      { header: "Passport", value: (r) => r.passportNumber },
-      { header: "Phone", value: (r) => r.phone },
-      { header: "Address", value: (r) => r.address },
-      { header: "Active", value: (r) => r.isActive },
-      { header: "Applications", value: (r) => r.applications },
-    ]);
-    downloadCsv("students.csv", csv);
-  };
-
-  const exportExamReportCsv = () => {
-    if (!data) return;
-    const csv = buildCsv(data.examSeatStats, [
-      { header: "Exam", value: (r) => r.name },
-      { header: "Year", value: (r) => r.year },
-      { header: "Session", value: (r) => r.session },
-      { header: "Location", value: (r) => r.location },
-      { header: "Total Seats", value: (r) => r.totalSeats },
-      { header: "Registered", value: (r) => r.registered },
-      { header: "Filled %", value: (r) => Number(r.filledPercent).toFixed(2) },
-    ]);
-    downloadCsv("exam-report.csv", csv);
+    const rows: XlsxCell[][] = [
+      [
+        "",
+        styledCell("EJU Internet Application List", "title"),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        styledCell("Exam Subjects", "group"),
+        "",
+        "",
+        "",
+        styledCell("Exam Language", "group"),
+        "",
+        "",
+        "",
+        "",
+        "",
+      ],
+      [
+        "",
+        styledCell("Application No", "header"),
+        styledCell("Name", "header"),
+        styledCell("Sex", "header"),
+        styledCell("Birth Date", "header"),
+        styledCell("Nationality", "header"),
+        styledCell("Address Code", "header"),
+        styledCell("Japanese Subject", "header"),
+        styledCell("Science", "header"),
+        styledCell("Japan and World", "header"),
+        styledCell("Mathematics", "header"),
+        styledCell("Japanese", "header"),
+        styledCell("English", "header"),
+        styledCell("Scholarship", "header"),
+        styledCell("Affiliation", "header"),
+        styledCell("OLDNAME", "header"),
+        styledCell("NEWNAME", "header"),
+      ],
+      ...data.rows.map((r) =>
+        [
+          "",
+          r.applicationNumber,
+          r.nameAlphabet,
+          formatSex(r.sex),
+          formatBirthDate(r.dateOfBirth),
+          formatCountryCode(r.countryCode),
+          formatAddressCode(r.addressCode, r.countryCode),
+          mark(r.subjectJapanese),
+          mark(r.subjectScience),
+          mark(r.subjectJapanAndWorld),
+          mark(r.subjectMathematics),
+          r.examLanguage === "JAPANESE" ? "O" : "",
+          r.examLanguage === "ENGLISH" ? "O" : "",
+          r.jassoScholarshipApply ? "Y" : "N",
+          r.schoolOrOccupation,
+          photoFilename(r.photoUrl),
+          renamedPhotoFilename(r.applicationNumber),
+        ].map((value, columnIndex) => dataCell(value, columnIndex)),
+      ),
+    ];
+    downloadXlsx("application-list.xlsx", {
+      sheetName: "Applications",
+      rows,
+      columnWidths: APPLICATION_COLUMN_WIDTHS,
+      merges: ["B1:Q1", "H2:K2", "L2:M2"],
+      freezeRows: 3,
+      autoFilter: `B3:Q${rows.length}`,
+    });
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <h1 className="text-3xl font-bold">
-        {lang === "mn" ? "Тайлан ба статистик" : "Reports and statistics"}
-      </h1>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <AdminPageHeader
+        icon={BarChart3}
+        eyebrow={lang === "mn" ? "Тайлан ба экспорт" : "Reports and export"}
+        title={lang === "mn" ? "Тайлан ба статистик" : "Reports and statistics"}
+        description={
+          lang === "mn"
+            ? "Бүртгэл, төлбөр, шалгалтын суудлын үзүүлэлтийг шүүж харах болон XLSX татах хэсэг."
+            : "Filter application, payment, and seat metrics, then export operational XLSX files."
+        }
+      />
 
-      <Card className="shadow-card">
-        <CardContent className="p-4 grid gap-3 md:grid-cols-4">
-          <div>
-            <Label>{lang === "mn" ? "Он" : "Year"}</Label>
+      <AdminPanel
+        title={lang === "mn" ? "Тайлангийн тохиргоо" : "Report filters"}
+        description={
+          lang === "mn"
+            ? "Он, улирал, шалгалтаар үзүүлэлтийг нарийвчилна."
+            : "Narrow metrics by year, session, and exam."
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={exportApplicationXlsx} disabled={!data}>
+              <Download className="h-4 w-4" />
+              {lang === "mn" ? "Бүх өргөдөл XLSX" : "Applications XLSX"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label={lang === "mn" ? "Он" : "Year"}>
             <Select value={year} onValueChange={setYear}>
               <SelectTrigger>
                 <SelectValue />
@@ -171,9 +294,8 @@ function AdminStatsPage() {
                 <SelectItem value="2026">2026</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Session</Label>
+          </Field>
+          <Field label="Session">
             <Select value={session} onValueChange={setSession}>
               <SelectTrigger>
                 <SelectValue />
@@ -184,9 +306,8 @@ function AdminStatsPage() {
                 <SelectItem value="SECOND">Second</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>{lang === "mn" ? "Шалгалт" : "Exam"}</Label>
+          </Field>
+          <Field label={lang === "mn" ? "Шалгалт" : "Exam"}>
             <Select value={examId} onValueChange={setExamId}>
               <SelectTrigger>
                 <SelectValue />
@@ -200,114 +321,172 @@ function AdminStatsPage() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex items-end gap-2">
-            <Button variant="outline" onClick={exportApplicationCsv} disabled={!data}>
-              {lang === "mn" ? "Бүх өргөдөл татах" : "Export applications"}
-            </Button>
-            <Button variant="outline" onClick={exportStudentCsv} disabled={!data}>
-              {lang === "mn" ? "Оюутан CSV" : "Students CSV"}
-            </Button>
-            <Button variant="outline" onClick={exportExamReportCsv} disabled={!data}>
-              {lang === "mn" ? "Шалгалтын тайлан" : "Exam report"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </Field>
+        </div>
+      </AdminPanel>
 
       {isLoading || !data ? (
-        <Card className="shadow-card">
-          <CardContent className="py-10 text-center text-muted-foreground">Loading...</CardContent>
-        </Card>
+        <AdminPanel>
+          <div className="py-12 text-center text-muted-foreground">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+          </div>
+        </AdminPanel>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
-            <KpiCard
-              title={lang === "mn" ? "Нийт өргөдөл" : "Total applications"}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            <AdminMetricCard
+              icon={BarChart3}
+              label={lang === "mn" ? "Нийт өргөдөл" : "Total"}
               value={data.kpi.totalApplications}
+              tone="blue"
             />
-            <KpiCard title={`Approved (${approvedPct.toFixed(1)}%)`} value={data.kpi.approved} />
-            <KpiCard title={`Pending (${pendingPct.toFixed(1)}%)`} value={data.kpi.pending} />
-            <KpiCard title={`Rejected (${rejectedPct.toFixed(1)}%)`} value={data.kpi.rejected} />
+            <AdminMetricCard
+              icon={CheckCircle2}
+              label={lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
+              value={data.kpi.approved}
+              tone="emerald"
+            />
+            <AdminMetricCard
+              icon={Clock3}
+              label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
+              value={data.kpi.pending}
+              tone="amber"
+            />
+            <AdminMetricCard
+              icon={XCircle}
+              label={lang === "mn" ? "Татгалзсан" : "Rejected"}
+              value={data.kpi.rejected}
+              tone="rose"
+            />
+            <AdminMetricCard
+              icon={CheckCircle2}
+              label={lang === "mn" ? "Төлсөн" : "Paid"}
+              value={data.kpi.paid}
+              tone="teal"
+            />
+            <AdminMetricCard
+              icon={XCircle}
+              label={lang === "mn" ? "Төлөөгүй" : "Unpaid"}
+              value={data.kpi.unpaid}
+              tone="violet"
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>
-                  {lang === "mn" ? "Сараар өргөдлийн тоо" : "Monthly applications"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
+            <AdminPanel
+              title={lang === "mn" ? "Сараар өргөдлийн тоо" : "Monthly applications"}
+              description={
+                lang === "mn"
+                  ? "Сонгосон шүүлтүүрийн дагуух бүртгэлийн урсгал."
+                  : "Registration flow for the selected filters."
+              }
+            >
+              <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.monthlyApplications}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#2563eb" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </AdminPanel>
 
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>
-                  {lang === "mn" ? "Хичээлийн ангилал" : "Subject distribution"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={data.subjectDistribution}
-                      dataKey="count"
-                      nameKey="key"
-                      outerRadius={90}
-                    >
-                      {data.subjectDistribution.map((entry, index) => (
-                        <Cell key={entry.key} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <AdminPanel
+              title={lang === "mn" ? "Хичээлийн ангилал" : "Subject distribution"}
+              description={
+                lang === "mn"
+                  ? "Сонгосон хичээлүүдийн тархалт."
+                  : "Distribution of selected subjects."
+              }
+              actions={<PieChartIcon className="h-4 w-4 text-muted-foreground" />}
+            >
+              <div className="h-72">
+                {data.subjectDistribution.length === 0 ? (
+                  <AdminEmptyState>{lang === "mn" ? "Өгөгдөл алга." : "No data."}</AdminEmptyState>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={data.subjectDistribution}
+                        dataKey="count"
+                        nameKey="key"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={42}
+                        outerRadius={82}
+                        paddingAngle={2}
+                      >
+                        {data.subjectDistribution.map((entry, index) => (
+                          <Cell key={entry.key} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </AdminPanel>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>{lang === "mn" ? "Байршлаар хуваарилалт" : "By location"}</CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
+            <AdminPanel
+              title={lang === "mn" ? "Байршлаар хуваарилалт" : "By location"}
+              description={
+                lang === "mn"
+                  ? "Шалгалт авах байршлын дагуух тоо."
+                  : "Applications by exam location."
+              }
+            >
+              <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.locationDistribution}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="location" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="location" tickLine={false} axisLine={false} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="count" fill="#0891b2" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </AdminPanel>
 
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>{lang === "mn" ? "Суудлын дүүргэлт %" : "Seat fill rate %"}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {data.examSeatStats.map((row) => (
-                  <div key={row.examId} className="rounded-md border p-3">
-                    <div className="font-medium">{row.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {row.registered}/{row.totalSeats} · {row.filledPercent.toFixed(1)}%
+            <AdminPanel
+              title={lang === "mn" ? "Суудлын дүүргэлт" : "Seat fill rate"}
+              description={
+                lang === "mn" ? "Шалгалт тус бүрийн суудлын ашиглалт." : "Seat usage by exam."
+              }
+            >
+              {data.examSeatStats.length === 0 ? (
+                <AdminEmptyState>
+                  {lang === "mn" ? "Суудлын мэдээлэл алга." : "No seat data."}
+                </AdminEmptyState>
+              ) : (
+                <div className="space-y-3">
+                  {data.examSeatStats.map((row) => (
+                    <div key={row.examId} className="rounded-lg border bg-background p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{row.name}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {row.registered}/{row.totalSeats} · {row.location}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-sm font-semibold text-primary">
+                          {row.filledPercent.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${Math.min(row.filledPercent, 100)}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  ))}
+                </div>
+              )}
+            </AdminPanel>
           </div>
         </>
       )}
@@ -315,13 +494,13 @@ function AdminStatsPage() {
   );
 }
 
-function KpiCard({ title, value }: { title: string; value: number }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Card className="shadow-card">
-      <CardContent className="pt-6">
-        <div className="text-sm text-muted-foreground">{title}</div>
-        <div className="mt-1 text-3xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
   );
 }

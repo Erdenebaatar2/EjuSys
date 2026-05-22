@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -44,7 +43,8 @@ public class AdminStatsController {
                                      @RequestParam(required = false) String session,
                                      @RequestParam(required = false) UUID examId) {
         List<Application> applications = appRepo.findAll();
-        Map<UUID, Exam> examMap = examRepo.findAll().stream().collect(Collectors.toMap(Exam::getId, x -> x));
+        List<Exam> activeExams = examRepo.findByActiveTrueOrderByExamDateAsc();
+        Map<UUID, Exam> examMap = activeExams.stream().collect(Collectors.toMap(Exam::getId, x -> x));
         Map<UUID, Profile> profileMap = profileRepo.findAll().stream().collect(Collectors.toMap(Profile::getId, x -> x));
 
         List<Application> filtered = applications.stream()
@@ -87,7 +87,7 @@ public class AdminStatsController {
                 .filter(e -> e != null && e.getLocation() != null)
                 .collect(Collectors.groupingBy(Exam::getLocation, LinkedHashMap::new, Collectors.counting()));
 
-        List<Map<String, Object>> examSeatStats = examRepo.findAll().stream()
+        List<Map<String, Object>> examSeatStats = activeExams.stream()
                 .filter(e -> (year == null || year.equals(e.getYear())) && (session == null || session.isBlank() || e.getSession().name().equals(session.toUpperCase())))
                 .map(e -> {
                     long registered = filtered.stream().filter(a -> e.getId().equals(a.getExamId())).count();
@@ -152,8 +152,8 @@ public class AdminStatsController {
         response.put("locationDistribution", locationDistribution.entrySet().stream().map(e -> Map.of("location", e.getKey(), "count", e.getValue())).toList());
         response.put("examSeatStats", examSeatStats);
         response.put("rows", rows);
-        response.put("students", profileMap.values().stream().map(p -> studentRow(p, applications)).toList());
-        response.put("exams", examRepo.findAll().stream()
+        response.put("students", profileMap.values().stream().map(p -> studentRow(p, filtered)).toList());
+        response.put("exams", activeExams.stream()
                 .sorted(Comparator.comparing(Exam::getExamDate))
                 .map(e -> Map.of(
                         "id", e.getId(),

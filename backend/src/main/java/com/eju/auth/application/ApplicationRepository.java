@@ -14,6 +14,42 @@ import java.util.UUID;
 public interface ApplicationRepository extends JpaRepository<Application, UUID> {
     long countByStatus(Application.Status status);
 
+    @Query("select count(distinct a.userId) from Application a")
+    long countDistinctUsersWithApplications();
+
+    @Query("""
+        select count(distinct a.userId) from Application a
+        where exists (
+          select 1 from Exam e
+          where e.id = a.examId
+            and e.active = true
+        )
+    """)
+    long countDistinctUsersWithActiveExamApplications();
+
+    @Query("""
+        select a from Application a
+        where exists (
+          select 1 from Exam e
+          where e.id = a.examId
+            and e.active = true
+        )
+        order by a.createdAt desc
+    """)
+    List<Application> findTop5ByActiveExamOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("""
+        select a from Application a
+        where a.userId = :userId
+          and exists (
+            select 1 from Exam e
+            where e.id = a.examId
+              and e.active = true
+          )
+        order by a.createdAt desc
+    """)
+    List<Application> findActiveExamApplicationsByUserId(@Param("userId") UUID userId);
+
     List<Application> findTop5ByOrderByCreatedAtDesc();
 
     List<Application> findByUserId(UUID userId);
@@ -24,11 +60,23 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     java.util.Optional<Application> findByUserIdAndExamId(UUID userId, UUID examId);
 
+    long countByApplicationNumberStartingWith(String prefix);
+
+    boolean existsByApplicationNumber(String applicationNumber);
+
     @Query("""
         select a from Application a
         where (:status is null or a.status = :status)
           and (:paymentStatus is null or a.paymentStatus = :paymentStatus)
           and (:examId is null or a.examId = :examId)
+          and (
+            :activeExamsOnly = false
+            or exists (
+              select 1 from Exam activeExam
+              where activeExam.id = a.examId
+                and activeExam.active = true
+            )
+          )
           and (:fromDate is null or a.createdAt >= :fromDate)
           and (:toDate is null or a.createdAt <= :toDate)
           and (
@@ -59,6 +107,7 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     Page<Application> search(@Param("status") Application.Status status,
                              @Param("paymentStatus") Application.PaymentStatus paymentStatus,
                              @Param("examId") UUID examId,
+                             @Param("activeExamsOnly") boolean activeExamsOnly,
                              @Param("fromDate") Instant fromDate,
                              @Param("toDate") Instant toDate,
                              @Param("searchUuid") UUID searchUuid,

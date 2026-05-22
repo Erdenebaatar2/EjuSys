@@ -1,10 +1,10 @@
 package com.eju.auth.admin;
 
-import com.eju.auth.application.Application;
 import com.eju.auth.application.ApplicationRepository;
 import com.eju.auth.exam.ExamRepository;
 import com.eju.auth.profile.ProfileRepository;
 import com.eju.auth.user.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,12 +33,9 @@ public class AdminDashboardController {
 
     @GetMapping
     public Map<String, Object> stats() {
-        long totalUsers = profileRepo.count();
-        long pending = appRepo.countByStatus(Application.Status.PENDING);
-        long approved = appRepo.countByStatus(Application.Status.APPROVED);
-        long rejected = appRepo.countByStatus(Application.Status.REJECTED);
-        long activeExams = examRepo.findAll().stream().filter(e -> e.isActive()).count();
-        List<Map<String, Object>> recent = appRepo.findTop5ByOrderByCreatedAtDesc().stream()
+        long registeredStudents = appRepo.countDistinctUsersWithActiveExamApplications();
+        long activeExams = examRepo.findByActiveTrueOrderByExamDateAsc().size();
+        List<Map<String, Object>> recent = appRepo.findTop5ByActiveExamOrderByCreatedAtDesc(PageRequest.of(0, 5)).stream()
                 .map(a -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", a.getId());
@@ -53,10 +50,7 @@ public class AdminDashboardController {
                     return m;
                 }).toList();
         return Map.of(
-                "totalUsers", totalUsers,
-                "pendingApplications", pending,
-                "approvedApplications", approved,
-                "rejectedApplications", rejected,
+                "totalUsers", registeredStudents,
                 "activeExams", activeExams,
                 "totalUsersAll", userRepo.count(),
                 "recentApplications", recent

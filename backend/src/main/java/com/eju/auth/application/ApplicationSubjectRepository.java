@@ -10,4 +10,6 @@ public interface ApplicationSubjectRepository extends JpaRepository<ApplicationS
 
     @Query("select a from ApplicationSubject a join fetch a.subject where a.id.applicationId = :appId")
     List<ApplicationSubject> findByApplicationId(@Param("appId") UUID applicationId);
+
+    void deleteByIdApplicationId(UUID applicationId);
 }
