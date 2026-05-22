@@ -31,7 +31,6 @@ import {
   Loader2,
   MapPin,
   Timer,
-  Users,
 } from "lucide-react";
 import { formatDate, isRegistrationOpen, sessionLabel } from "@/lib/eju-format";
 import { ExamRegistrationSheet, type ExamInfo } from "@/components/ExamRegistrationSheet";
@@ -54,8 +53,6 @@ interface Exam {
   name: string;
   examDate: string;
   location: string;
-  totalSeats: number;
-  availableSeats: number;
   registrationStart: string;
   registrationEnd: string;
   session: "FIRST" | "SECOND";
@@ -147,7 +144,6 @@ function StudentExams() {
     (exam) => !isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
   );
   const registeredCount = examsWithApplication.filter((exam) => exam.existingApplication).length;
-  const availableSeats = openExams.reduce((sum, exam) => sum + exam.availableSeats, 0);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -157,8 +153,8 @@ function StudentExams() {
         title={lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}
         description={
           lang === "mn"
-            ? "Шалгалтын огноо, байршил, бүртгэлийн хугацаа болон суудлын мэдээлэл."
-            : "Exam date, location, registration window, and seat availability."
+            ? "Шалгалтын огноо, байршил болон бүртгэлийн хугацааны мэдээлэл."
+            : "Exam date, location, and registration window."
         }
       />
 
@@ -170,9 +166,9 @@ function StudentExams() {
           tone="emerald"
         />
         <StudentMetricCard
-          icon={Users}
-          label={lang === "mn" ? "Сул суудал" : "Available seats"}
-          value={availableSeats}
+          icon={CalendarDays}
+          label={lang === "mn" ? "Нийт шалгалт" : "Total exams"}
+          value={examsWithApplication.length}
           tone="blue"
         />
         <StudentMetricCard
@@ -289,9 +285,6 @@ function ExamCard({
   const existingApplication = exam.existingApplication;
   const isRegistered = Boolean(existingApplication);
   const canRegister = open && !isRegistered;
-  const seatsLeft = exam.availableSeats;
-  const fillPct = Math.min(100, ((exam.totalSeats - seatsLeft) / exam.totalSeats) * 100);
-  const almostFull = seatsLeft < exam.totalSeats * 0.2;
 
   return (
     <div
@@ -324,27 +317,6 @@ function ExamCard({
               lang,
             )}`}
           />
-        </div>
-
-        <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Users className="h-3 w-3" />
-              {lang === "mn" ? "Суудал" : "Seats"}
-            </span>
-            <span className={cn("font-medium", almostFull ? "text-rose-600" : "text-foreground")}>
-              {seatsLeft}/{exam.totalSeats}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-background">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                almostFull ? "bg-rose-500" : fillPct > 60 ? "bg-amber-500" : "bg-primary",
-              )}
-              style={{ width: `${fillPct}%` }}
-            />
-          </div>
         </div>
 
         {isRegistered && (

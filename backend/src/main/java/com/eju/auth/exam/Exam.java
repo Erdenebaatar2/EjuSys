@@ -74,6 +74,7 @@ public class Exam {
     void onCreate() {
         createdAt = Instant.now();
         updatedAt = createdAt;
+        if (totalSeats == null) totalSeats = 0;
         if (availableSeats == null) availableSeats = totalSeats;
     }
 

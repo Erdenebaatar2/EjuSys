@@ -16,6 +16,14 @@ const EN_MONTHS = [
 ];
 
 export function formatDate(dateStr: string, lang: Lang = "mn"): string {
+  const date = parseDateKey(dateStr);
+  if (date) {
+    if (lang === "en") {
+      return `${EN_MONTHS[date.month - 1]} ${date.day}, ${date.year}`;
+    }
+    return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+  }
+
   const d = new Date(dateStr);
   if (lang === "en") {
     return `${EN_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
@@ -24,9 +32,33 @@ export function formatDate(dateStr: string, lang: Lang = "mn"): string {
 }
 
 export function isRegistrationOpen(start: string, end: string): boolean {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(start) <= today && new Date(end) >= today;
+  const today = localDateKey(new Date());
+  const startKey = normalizeDateKey(start);
+  const endKey = normalizeDateKey(end);
+
+  return startKey <= today && endKey >= today;
+}
+
+function normalizeDateKey(value: string): string {
+  const date = parseDateKey(value);
+  if (date) {
+    return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+  }
+  return localDateKey(new Date(value));
+}
+
+function localDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseDateKey(value: string): { year: number; month: number; day: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
 }
 
 export function statusLabel(status: string, lang: Lang = "mn"): string {

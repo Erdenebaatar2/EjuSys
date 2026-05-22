@@ -111,12 +111,18 @@ function AdminApplications() {
   const [deleteFor, setDeleteFor] = useState<ApplicationRow | null>(null);
   const [reason, setReason] = useState("");
 
-  const { data: activeExam } = useQuery({
-    queryKey: ["admin", "exam", "for-filter"],
-    queryFn: () => apiGet<{ id: string; name: string } | undefined>("/api/admin/exam"),
+  const { data: exams = [] } = useQuery({
+    queryKey: ["admin", "exams", "for-filter"],
+    queryFn: () => apiGet<Array<{ id: string; name: string }>>("/api/admin/exam/all"),
   });
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    error: listError,
+    isError: listIsError,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: [
       "admin",
       "applications",
@@ -140,6 +146,7 @@ function AdminApplications() {
       params.set("size", "20");
       return apiGet<ListResponse>(`/api/admin/applications?${params}`);
     },
+    retry: 1,
   });
 
   const approveMut = useMutation({
@@ -325,9 +332,11 @@ function AdminApplications() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
-                {activeExam?.id ? (
-                  <SelectItem value={activeExam.id}>{activeExam.name}</SelectItem>
-                ) : null}
+                {exams.map((exam) => (
+                  <SelectItem key={exam.id} value={exam.id}>
+                    {exam.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
@@ -382,6 +391,23 @@ function AdminApplications() {
         {isLoading ? (
           <div className="py-16 text-center">
             <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : listIsError ? (
+          <div className="p-5">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm">
+              <div className="font-semibold text-destructive">
+                {lang === "mn"
+                  ? "Бүртгэлийн жагсаалт ачаалж чадсангүй."
+                  : "Could not load applications."}
+              </div>
+              <p className="mt-1 text-muted-foreground">
+                {listError instanceof Error ? listError.message : "Request failed"}
+              </p>
+              <Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}>
+                <RotateCcw className="h-4 w-4" />
+                {lang === "mn" ? "Дахин унших" : "Retry"}
+              </Button>
+            </div>
           </div>
         ) : (data?.items ?? []).length === 0 ? (
           <div className="p-5">

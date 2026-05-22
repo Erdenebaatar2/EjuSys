@@ -137,6 +137,7 @@ public class StudentApplicationController {
                 : examRepo.findFirstRegistrationOpen(today);
 
         return exam.filter(Exam::isActive)
+                .filter(e -> !e.getRegistrationStart().isAfter(today))
                 .filter(e -> !e.getRegistrationEnd().isBefore(today));
     }
 

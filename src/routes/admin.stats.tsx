@@ -63,7 +63,7 @@ type StatsResponse = {
     year: number;
     session: string;
     location: string;
-    totalSeats: number;
+    totalSeats: number | null;
     registered: number;
     filledPercent: number;
   }>;
@@ -260,8 +260,8 @@ function AdminStatsPage() {
         title={lang === "mn" ? "Тайлан ба статистик" : "Reports and statistics"}
         description={
           lang === "mn"
-            ? "Бүртгэл, төлбөр, шалгалтын суудлын үзүүлэлтийг шүүж харах болон XLSX татах хэсэг."
-            : "Filter application, payment, and seat metrics, then export operational XLSX files."
+            ? "Бүртгэл, төлбөр, шалгалтын үзүүлэлтийг шүүж харах болон XLSX татах хэсэг."
+            : "Filter application, payment, and exam metrics, then export operational XLSX files."
         }
       />
 
@@ -452,38 +452,51 @@ function AdminStatsPage() {
             </AdminPanel>
 
             <AdminPanel
-              title={lang === "mn" ? "Суудлын дүүргэлт" : "Seat fill rate"}
+              title={lang === "mn" ? "Шалгалтын бүртгэл" : "Exam registrations"}
               description={
-                lang === "mn" ? "Шалгалт тус бүрийн суудлын ашиглалт." : "Seat usage by exam."
+                lang === "mn"
+                  ? "Шалгалт тус бүр дээр үүссэн бүртгэлийн тоо."
+                  : "Application count by exam."
               }
             >
               {data.examSeatStats.length === 0 ? (
                 <AdminEmptyState>
-                  {lang === "mn" ? "Суудлын мэдээлэл алга." : "No seat data."}
+                  {lang === "mn"
+                    ? "Шалгалтын бүртгэлийн мэдээлэл алга."
+                    : "No exam registration data."}
                 </AdminEmptyState>
               ) : (
                 <div className="space-y-3">
-                  {data.examSeatStats.map((row) => (
-                    <div key={row.examId} className="rounded-lg border bg-background p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate font-medium">{row.name}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            {row.registered}/{row.totalSeats} · {row.location}
+                  {data.examSeatStats.map((row) => {
+                    const hasSeatLimit = typeof row.totalSeats === "number" && row.totalSeats > 0;
+
+                    return (
+                      <div key={row.examId} className="rounded-lg border bg-background p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{row.name}</div>
+                            <div className="mt-1 text-sm text-muted-foreground">
+                              {hasSeatLimit
+                                ? `${row.registered}/${row.totalSeats}`
+                                : `${row.registered} ${lang === "mn" ? "бүртгэл" : "applications"}`}{" "}
+                              · {row.location}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-sm font-semibold text-primary">
+                            {hasSeatLimit ? `${row.filledPercent.toFixed(1)}%` : row.registered}
                           </div>
                         </div>
-                        <div className="shrink-0 text-sm font-semibold text-primary">
-                          {row.filledPercent.toFixed(1)}%
-                        </div>
+                        {hasSeatLimit && (
+                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${Math.min(row.filledPercent, 100)}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.min(row.filledPercent, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </AdminPanel>

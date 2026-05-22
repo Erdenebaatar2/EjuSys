@@ -8,8 +8,6 @@ import com.eju.auth.exam.ExamRepository;
 import com.eju.auth.payment.PaymentRepository;
 import com.eju.auth.profile.Profile;
 import com.eju.auth.profile.ProfileRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +17,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -63,25 +63,35 @@ public class AdminApplicationController {
                 ? null : Application.PaymentStatus.valueOf(paymentStatus.toUpperCase());
         Instant from = fromDate == null ? null : fromDate.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant to = toDate == null ? null : toDate.plusDays(1).atStartOfDay().minusNanos(1).toInstant(ZoneOffset.UTC);
-        UUID searchUuid = null;
-        try {
-            if (search != null && !search.isBlank()) {
-                searchUuid = UUID.fromString(search.trim());
-            }
-        } catch (Exception ignored) {
-            searchUuid = null;
-        }
+        String searchTerm = search == null ? "" : search.trim().toLowerCase();
+        Set<UUID> activeExamIds = new HashSet<>(
+                examRepo.findByActiveTrueOrderByExamDateAsc().stream().map(Exam::getId).toList()
+        );
 
-        Page<Application> result = appRepo.search(st, ps, examId, true, from, to, searchUuid,
-                (search == null || search.isBlank()) ? null : search,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, 100));
+        List<Application> filtered = appRepo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .filter(a -> activeExamIds.contains(a.getExamId()))
+                .filter(a -> st == null || a.getStatus() == st)
+                .filter(a -> ps == null || a.getPaymentStatus() == ps)
+                .filter(a -> examId == null || examId.equals(a.getExamId()))
+                .filter(a -> from == null || !a.getCreatedAt().isBefore(from))
+                .filter(a -> to == null || !a.getCreatedAt().isAfter(to))
+                .filter(a -> matchesSearch(a, searchTerm))
+                .toList();
 
-        List<Map<String, Object>> items = result.getContent().stream().map(this::enrich).toList();
+        int total = filtered.size();
+        int fromIndex = Math.min(safePage * safeSize, total);
+        int toIndex = Math.min(fromIndex + safeSize, total);
+        List<Map<String, Object>> items = filtered.subList(fromIndex, toIndex).stream()
+                .map(this::enrich)
+                .toList();
         Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("items", items);
-        resp.put("total", result.getTotalElements());
-        resp.put("page", page);
-        resp.put("size", size);
+        resp.put("total", total);
+        resp.put("page", safePage);
+        resp.put("size", safeSize);
         return resp;
     }
 
@@ -103,8 +113,10 @@ public class AdminApplicationController {
                 a.setRejectionReason(null);
                 appRepo.save(a);
                 examRepo.findById(a.getExamId()).ifPresent(ex -> {
-                    ex.setAvailableSeats(Math.max(0, ex.getAvailableSeats() - 1));
-                    examRepo.save(ex);
+                    if (hasSeatLimit(ex)) {
+                        ex.setAvailableSeats(Math.max(0, ex.getAvailableSeats() - 1));
+                        examRepo.save(ex);
+                    }
                 });
             }
             return ResponseEntity.ok(enrich(a));
@@ -120,8 +132,10 @@ public class AdminApplicationController {
             appRepo.save(a);
             if (wasApproved) {
                 examRepo.findById(a.getExamId()).ifPresent(ex -> {
-                    ex.setAvailableSeats(ex.getAvailableSeats() + 1);
-                    examRepo.save(ex);
+                    if (hasSeatLimit(ex)) {
+                        ex.setAvailableSeats(ex.getAvailableSeats() + 1);
+                        examRepo.save(ex);
+                    }
                 });
             }
             return ResponseEntity.ok(enrich(a));
@@ -143,8 +157,10 @@ public class AdminApplicationController {
         return appRepo.findById(id).<ResponseEntity<?>>map(a -> {
             if (a.getStatus() == Application.Status.APPROVED) {
                 examRepo.findById(a.getExamId()).ifPresent(ex -> {
-                    ex.setAvailableSeats(ex.getAvailableSeats() + 1);
-                    examRepo.save(ex);
+                    if (hasSeatLimit(ex)) {
+                        ex.setAvailableSeats(ex.getAvailableSeats() + 1);
+                        examRepo.save(ex);
+                    }
                 });
             }
             paymentRepo.deleteByApplicationId(id);
@@ -213,5 +229,42 @@ public class AdminApplicationController {
             m.put("exam", em);
         }
         return m;
+    }
+
+    private boolean hasSeatLimit(Exam exam) {
+        return exam.getTotalSeats() != null
+                && exam.getTotalSeats() > 0
+                && exam.getAvailableSeats() != null;
+    }
+
+    private boolean matchesSearch(Application app, String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) return true;
+
+        if (contains(app.getApplicationNumber(), searchTerm)
+                || contains(app.getId(), searchTerm)
+                || contains(app.getUserId(), searchTerm)
+                || contains(app.getExamId(), searchTerm)) {
+            return true;
+        }
+
+        Profile profile = profileRepo.findById(app.getUserId()).orElse(null);
+        if (profile != null && (
+                contains(profile.getFirstName(), searchTerm)
+                        || contains(profile.getLastName(), searchTerm)
+                        || contains(profile.getEmail(), searchTerm)
+                        || contains(profile.getPassportNumber(), searchTerm)
+        )) {
+            return true;
+        }
+
+        Exam exam = examRepo.findById(app.getExamId()).orElse(null);
+        return exam != null && (
+                contains(exam.getName(), searchTerm)
+                        || contains(exam.getLocation(), searchTerm)
+        );
+    }
+
+    private boolean contains(Object value, String searchTerm) {
+        return value != null && value.toString().toLowerCase().contains(searchTerm);
     }
 }

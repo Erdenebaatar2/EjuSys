@@ -41,8 +41,7 @@ public class StudentExamController {
     @GetMapping("/exams")
     public List<Map<String, Object>> getAvailableExams(Authentication auth) {
         UUID userId = auth == null ? null : (UUID) auth.getPrincipal();
-        LocalDate today = LocalDate.now();
-        return examRepo.findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today)
+        return examRepo.findByActiveTrueOrderByExamDateAsc()
                 .stream()
                 .map(e -> {
                     Map<String, Object> result = new HashMap<>(toMap(e));

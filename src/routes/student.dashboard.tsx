@@ -300,8 +300,8 @@ function StudentDashboard() {
             title={lang === "mn" ? "Шалгалт сонгох" : "Choose exam"}
             text={
               lang === "mn"
-                ? "Нээлттэй шалгалтын огноо, байршил, суудлыг харна."
-                : "Check open exam dates, venues, and seats."
+                ? "Нээлттэй шалгалтын огноо, байршил, бүртгэлийн хугацааг харна."
+                : "Check open exam dates, venues, and registration windows."
             }
             to="/student/exams"
             cta={lang === "mn" ? "Шалгалт" : "Exams"}

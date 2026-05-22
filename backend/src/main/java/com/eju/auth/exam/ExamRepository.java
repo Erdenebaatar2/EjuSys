@@ -10,11 +10,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ExamRepository extends JpaRepository<Exam, UUID> {
 
     List<Exam> findByActiveTrueOrderByExamDateAsc();
-    List<Exam> findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(LocalDate today);
+    List<Exam> findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(
+            LocalDate start,
+            LocalDate end
+    );
     Optional<Exam> findFirstByActiveTrueOrderByExamDateAsc();
 
     default Optional<Exam> findFirstRegistrationOpen(LocalDate today) {
-        return findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today)
+        return findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today, today)
                 .stream()
                 .findFirst();
     }

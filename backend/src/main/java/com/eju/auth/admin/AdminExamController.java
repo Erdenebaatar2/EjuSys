@@ -94,14 +94,15 @@ public class AdminExamController {
     }
 
     private void applyRequest(Exam e, ExamRequest req, boolean isNew) {
+        int totalSeats = req.totalSeats() == null ? 0 : Math.max(0, req.totalSeats());
         e.setName(req.name());
         e.setYear(req.year());
         e.setSession(Exam.Session.valueOf(req.session().toUpperCase()));
         e.setExamDate(req.examDate());
         e.setLocation(req.location());
-        e.setTotalSeats(req.totalSeats());
-        if (isNew) {
-            e.setAvailableSeats(req.totalSeats());
+        e.setTotalSeats(totalSeats);
+        if (isNew || totalSeats == 0) {
+            e.setAvailableSeats(totalSeats);
         }
         e.setRegistrationStart(req.registrationStart());
         e.setRegistrationEnd(req.registrationEnd());

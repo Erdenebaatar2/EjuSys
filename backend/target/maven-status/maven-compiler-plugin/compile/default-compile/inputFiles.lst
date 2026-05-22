@@ -12,6 +12,7 @@ C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\student\FileUplo
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\auth\dto\AuthDtos.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\subject\SubjectRepository.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\config\HealthController.java
+C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\config\BootstrapTestUsersRunner.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\payment\QPayProperties.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\admin\AdminStatsController.java
 C:\Users\Bulganerdene\EjuSys\backend\src\main\java\com\eju\auth\config\JwtAuthFilter.java

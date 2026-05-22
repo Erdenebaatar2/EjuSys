@@ -31,18 +31,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  BookOpen,
-  CalendarDays,
-  Clock3,
-  MapPin,
-  Pencil,
-  Plus,
-  Save,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { BookOpen, CalendarDays, Clock3, MapPin, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isRegistrationOpen } from "@/lib/eju-format";
 
 export const Route = createFileRoute("/admin/exams")({
   head: () => ({ meta: [{ title: "Админ - Шалгалтууд | EJU" }] }),
@@ -58,8 +49,6 @@ interface ExamRecord {
   session: Session;
   examDate: string;
   location: string;
-  totalSeats: number;
-  availableSeats: number;
   registrationStart: string;
   registrationEnd: string;
   description?: string | null;
@@ -76,7 +65,6 @@ interface ExamForm {
   session: Session;
   examDate: string;
   location: string;
-  totalSeats: string;
   registrationStart: string;
   registrationEnd: string;
   description: string;
@@ -107,19 +95,16 @@ function AdminExamPage() {
   );
 
   const selectedExam = exams.find((exam) => exam.id === selectedExamId) ?? null;
-  const totalSeats = exams.reduce((sum, exam) => sum + exam.totalSeats, 0);
-  const availableSeats = exams.reduce((sum, exam) => sum + exam.availableSeats, 0);
-  const registeredSeats = totalSeats - availableSeats;
+  const openExamCount = exams.filter((exam) =>
+    isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
+  ).length;
+  const closedExamCount = exams.length - openExamCount;
 
   useEffect(() => {
     if (isCreating) return;
-    if (exams.length === 0) {
+    if (selectedExamId && !exams.some((exam) => exam.id === selectedExamId)) {
       setSelectedExamId(null);
       setForm(emptyForm());
-      return;
-    }
-    if (!selectedExamId || !exams.some((exam) => exam.id === selectedExamId)) {
-      setSelectedExamId(exams[0].id);
     }
   }, [exams, isCreating, selectedExamId]);
 
@@ -148,8 +133,7 @@ function AdminExamPage() {
         if (index === -1) return [...current, saved];
         return current.map((exam) => (exam.id === saved.id ? saved : exam));
       });
-      setIsCreating(false);
-      setSelectedExamId(saved.id);
+      closeEditor();
       void invalidateExamData(qc);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
@@ -191,10 +175,18 @@ function AdminExamPage() {
     setForm(emptyForm());
   }
 
+  function closeEditor() {
+    setIsCreating(false);
+    setSelectedExamId(null);
+    setForm(emptyForm());
+  }
+
   function selectExam(id: string) {
     setIsCreating(false);
     setSelectedExamId(id);
   }
+
+  const editorOpen = isCreating || Boolean(selectedExam);
 
   const saveLabel =
     isCreating || !selectedExam
@@ -213,8 +205,8 @@ function AdminExamPage() {
         title={lang === "mn" ? "Шалгалт удирдах" : "Exam management"}
         description={
           lang === "mn"
-            ? "Идэвхтэй шалгалтын бүртгэл, суудал, хугацаа болон шалгалтын нэмэлт зааврыг удирдана."
-            : "Manage active exam records, seat capacity, registration windows, and exam instructions."
+            ? "Идэвхтэй шалгалтын бүртгэл, хугацаа болон шалгалтын нэмэлт зааврыг удирдана."
+            : "Manage active exam records, registration windows, and exam instructions."
         }
         actions={
           <Button type="button" onClick={startCreate}>
@@ -233,22 +225,22 @@ function AdminExamPage() {
           tone="blue"
         />
         <AdminMetricCard
-          icon={Users}
-          label={lang === "mn" ? "Бүртгэгдсэн суудал" : "Registered seats"}
-          value={registeredSeats}
-          helper={`${availableSeats.toLocaleString()} ${lang === "mn" ? "сул суудал" : "available"}`}
+          icon={CalendarDays}
+          label={lang === "mn" ? "Бүртгэл нээлттэй" : "Registration open"}
+          value={openExamCount}
+          helper={lang === "mn" ? "Одоо бүртгэл авч буй" : "Accepting applications now"}
           tone="emerald"
         />
         <AdminMetricCard
           icon={Clock3}
-          label={lang === "mn" ? "Нийт суудал" : "Total seats"}
-          value={totalSeats}
-          helper={lang === "mn" ? "Идэвхтэй шалгалтуудын нийлбэр" : "Across active exams"}
+          label={lang === "mn" ? "Бүртгэл хаалттай" : "Registration closed"}
+          value={closedExamCount}
+          helper={lang === "mn" ? "Одоогоор бүртгэл авахгүй" : "Not currently accepting"}
           tone="teal"
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className={cn("grid gap-6", editorOpen && "xl:grid-cols-[380px_minmax(0,1fr)]")}>
         <AdminPanel
           title={lang === "mn" ? "Одоогийн шалгалтууд" : "Current exams"}
           description={
@@ -267,10 +259,10 @@ function AdminExamPage() {
             <div className="space-y-2">
               {exams.map((exam) => {
                 const selected = exam.id === selectedExamId && !isCreating;
-                const filledPercent =
-                  exam.totalSeats > 0
-                    ? Math.round(((exam.totalSeats - exam.availableSeats) / exam.totalSeats) * 100)
-                    : 0;
+                const registrationOpen = isRegistrationOpen(
+                  exam.registrationStart,
+                  exam.registrationEnd,
+                );
 
                 return (
                   <div
@@ -297,21 +289,27 @@ function AdminExamPage() {
                             <span>{exam.examDate}</span>
                           </div>
                         </div>
-                        <Badge variant="outline" className="shrink-0 bg-white">
-                          {filledPercent}%
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0",
+                            registrationOpen
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "bg-white text-muted-foreground",
+                          )}
+                        >
+                          {registrationOpen
+                            ? lang === "mn"
+                              ? "Нээлттэй"
+                              : "Open"
+                            : lang === "mn"
+                              ? "Хаалттай"
+                              : "Closed"}
                         </Badge>
-                      </div>
-                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.min(filledPercent, 100)}%` }}
-                        />
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin className="h-3.5 w-3.5" />
-                        <span className="min-w-0 truncate">
-                          {exam.location} · {exam.availableSeats}/{exam.totalSeats}
-                        </span>
+                        <span className="min-w-0 truncate">{exam.location}</span>
                       </div>
                     </button>
                     <div className="mt-3 flex justify-end gap-2">
@@ -342,180 +340,173 @@ function AdminExamPage() {
           )}
         </AdminPanel>
 
-        <div className="space-y-6">
-          <AdminPanel
-            title={lang === "mn" ? "Үндсэн мэдээлэл" : "Exam details"}
-            description={
-              isCreating
-                ? lang === "mn"
-                  ? "Шинэ шалгалтын мэдээллийг бөглөнө үү."
-                  : "Fill in the new exam details."
-                : selectedExam?.name
-            }
-            actions={
-              <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
-                {saveMut.isPending ? (
-                  <Clock3 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {saveLabel}
-              </Button>
-            }
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label={lang === "mn" ? "Шалгалтын нэр" : "Exam name"}>
-                <Input
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Он" : "Year"}>
-                <Input
-                  type="number"
-                  required
-                  min="2000"
-                  value={form.year}
-                  onChange={(e) => setForm({ ...form, year: e.target.value })}
-                />
-              </Field>
-              <Field label="Session">
-                <Select
-                  value={form.session}
-                  onValueChange={(value) => setForm({ ...form, session: value as Session })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FIRST">{sessionLabel("FIRST", lang)}</SelectItem>
-                    <SelectItem value="SECOND">{sessionLabel("SECOND", lang)}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}>
-                <div className="relative">
-                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        {editorOpen && (
+          <div className="space-y-6">
+            <AdminPanel
+              title={lang === "mn" ? "Үндсэн мэдээлэл" : "Exam details"}
+              description={
+                isCreating
+                  ? lang === "mn"
+                    ? "Шинэ шалгалтын мэдээллийг бөглөнө үү."
+                    : "Fill in the new exam details."
+                  : selectedExam?.name
+              }
+              actions={
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeEditor}>
+                    {lang === "mn" ? "Болих" : "Cancel"}
+                  </Button>
+                  <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+                    {saveMut.isPending ? (
+                      <Clock3 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {saveLabel}
+                  </Button>
+                </div>
+              }
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={lang === "mn" ? "Шалгалтын нэр" : "Exam name"}>
                   <Input
-                    className="pl-9"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </Field>
+                <Field label={lang === "mn" ? "Он" : "Year"}>
+                  <Input
+                    type="number"
+                    required
+                    min="2000"
+                    value={form.year}
+                    onChange={(e) => setForm({ ...form, year: e.target.value })}
+                  />
+                </Field>
+                <Field label="Session">
+                  <Select
+                    value={form.session}
+                    onValueChange={(value) => setForm({ ...form, session: value as Session })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FIRST">{sessionLabel("FIRST", lang)}</SelectItem>
+                      <SelectItem value="SECOND">{sessionLabel("SECOND", lang)}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}>
+                  <div className="relative">
+                    <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      type="date"
+                      required
+                      value={form.examDate}
+                      onChange={(e) => setForm({ ...form, examDate: e.target.value })}
+                    />
+                  </div>
+                </Field>
+                <Field label={lang === "mn" ? "Байршил" : "Location"}>
+                  <Input
+                    required
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  />
+                </Field>
+                <Field label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration start"}>
+                  <Input
                     type="date"
                     required
-                    value={form.examDate}
-                    onChange={(e) => setForm({ ...form, examDate: e.target.value })}
-                  />
-                </div>
-              </Field>
-              <Field label={lang === "mn" ? "Байршил" : "Location"}>
-                <Input
-                  required
-                  value={form.location}
-                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Нийт суудал" : "Total seats"}>
-                <Input
-                  type="number"
-                  required
-                  min="1"
-                  value={form.totalSeats}
-                  onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration start"}>
-                <Input
-                  type="date"
-                  required
-                  value={form.registrationStart}
-                  onChange={(e) => setForm({ ...form, registrationStart: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Бүртгэл дуусах" : "Registration end"}>
-                <Input
-                  type="date"
-                  required
-                  value={form.registrationEnd}
-                  onChange={(e) => setForm({ ...form, registrationEnd: e.target.value })}
-                />
-              </Field>
-              <div className="md:col-span-2">
-                <Field label={lang === "mn" ? "Тайлбар" : "Description"}>
-                  <Textarea
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    value={form.registrationStart}
+                    onChange={(e) => setForm({ ...form, registrationStart: e.target.value })}
                   />
                 </Field>
-              </div>
-              <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={form.isActive}
-                    onCheckedChange={(value) => setForm({ ...form, isActive: value })}
+                <Field label={lang === "mn" ? "Бүртгэл дуусах" : "Registration end"}>
+                  <Input
+                    type="date"
+                    required
+                    value={form.registrationEnd}
+                    onChange={(e) => setForm({ ...form, registrationEnd: e.target.value })}
                   />
-                  <Label>{lang === "mn" ? "Идэвхтэй" : "Active"}</Label>
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label={lang === "mn" ? "Тайлбар" : "Description"}>
+                    <Textarea
+                      rows={3}
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    />
+                  </Field>
                 </div>
-                {selectedExam && (
-                  <Badge variant="outline">
-                    {selectedExam.availableSeats}/{selectedExam.totalSeats}
-                  </Badge>
-                )}
+                <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={form.isActive}
+                      onCheckedChange={(value) => setForm({ ...form, isActive: value })}
+                    />
+                    <Label>{lang === "mn" ? "Идэвхтэй" : "Active"}</Label>
+                  </div>
+                </div>
               </div>
-            </div>
-          </AdminPanel>
+            </AdminPanel>
 
-          <AdminPanel
-            title={lang === "mn" ? "Шалгалтын нэмэлт мэдээлэл" : "Additional exam information"}
-            description={
-              lang === "mn"
-                ? "Оюутанд харагдах байр, цаг, үргэлжлэх хугацаа, заавар."
-                : "Venue, start time, duration, and method visible to students."
-            }
-            actions={
-              <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
-                {saveMut.isPending ? (
-                  <Clock3 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {lang === "mn" ? "Мэдээлэл хадгалах" : "Save information"}
-              </Button>
-            }
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label={lang === "mn" ? "Шалгалт авах газар" : "Exam venue"}>
-                <Input
-                  value={form.examInfoLocation}
-                  onChange={(e) => setForm({ ...form, examInfoLocation: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Эхлэх цаг" : "Start time"}>
-                <Input
-                  type="time"
-                  value={form.examInfoStartTime}
-                  onChange={(e) => setForm({ ...form, examInfoStartTime: e.target.value })}
-                />
-              </Field>
-              <Field label={lang === "mn" ? "Хугацаа (минут)" : "Duration (minutes)"}>
-                <Input
-                  type="number"
-                  min="1"
-                  value={form.examInfoDurationMinutes}
-                  onChange={(e) => setForm({ ...form, examInfoDurationMinutes: e.target.value })}
-                />
-              </Field>
-              <div className="md:col-span-2">
-                <Field label={lang === "mn" ? "Хэрхэн авах" : "Method"}>
-                  <Textarea
-                    rows={4}
-                    value={form.examInfoMethod}
-                    onChange={(e) => setForm({ ...form, examInfoMethod: e.target.value })}
+            <AdminPanel
+              title={lang === "mn" ? "Шалгалтын нэмэлт мэдээлэл" : "Additional exam information"}
+              description={
+                lang === "mn"
+                  ? "Оюутанд харагдах байр, цаг, үргэлжлэх хугацаа, заавар."
+                  : "Venue, start time, duration, and method visible to students."
+              }
+              actions={
+                <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
+                  {saveMut.isPending ? (
+                    <Clock3 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {lang === "mn" ? "Мэдээлэл хадгалах" : "Save information"}
+                </Button>
+              }
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label={lang === "mn" ? "Шалгалт авах газар" : "Exam venue"}>
+                  <Input
+                    value={form.examInfoLocation}
+                    onChange={(e) => setForm({ ...form, examInfoLocation: e.target.value })}
                   />
                 </Field>
+                <Field label={lang === "mn" ? "Эхлэх цаг" : "Start time"}>
+                  <Input
+                    type="time"
+                    value={form.examInfoStartTime}
+                    onChange={(e) => setForm({ ...form, examInfoStartTime: e.target.value })}
+                  />
+                </Field>
+                <Field label={lang === "mn" ? "Хугацаа (минут)" : "Duration (minutes)"}>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={form.examInfoDurationMinutes}
+                    onChange={(e) => setForm({ ...form, examInfoDurationMinutes: e.target.value })}
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label={lang === "mn" ? "Хэрхэн авах" : "Method"}>
+                    <Textarea
+                      rows={4}
+                      value={form.examInfoMethod}
+                      onChange={(e) => setForm({ ...form, examInfoMethod: e.target.value })}
+                    />
+                  </Field>
+                </div>
               </div>
-            </div>
-          </AdminPanel>
-        </div>
+            </AdminPanel>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!deleteFor} onOpenChange={(open) => !open && setDeleteFor(null)}>
@@ -554,7 +545,6 @@ function emptyForm(): ExamForm {
     session: "FIRST",
     examDate: "",
     location: "",
-    totalSeats: "100",
     registrationStart: "",
     registrationEnd: "",
     description: "",
@@ -573,7 +563,6 @@ function formFromExam(exam: ExamRecord): ExamForm {
     session: exam.session,
     examDate: exam.examDate,
     location: exam.location,
-    totalSeats: String(exam.totalSeats),
     registrationStart: exam.registrationStart,
     registrationEnd: exam.registrationEnd,
     description: exam.description ?? "",
@@ -593,7 +582,7 @@ function formToPayload(form: ExamForm) {
     session: form.session,
     examDate: form.examDate,
     location: form.location,
-    totalSeats: Number(form.totalSeats),
+    totalSeats: 0,
     registrationStart: form.registrationStart,
     registrationEnd: form.registrationEnd,
     description: blankToNull(form.description),
@@ -610,8 +599,8 @@ function formToPayload(form: ExamForm) {
 function validateExamForm(form: ExamForm, lang: "mn" | "en"): string | null {
   const requiredMessage =
     lang === "mn"
-      ? "Шалгалтын нэр, огноо, байршил, суудал, бүртгэлийн эхлэх/дуусах огноог бүрэн бөглөнө үү."
-      : "Please fill in the exam name, date, location, seats, and registration dates.";
+      ? "Шалгалтын нэр, огноо, байршил, бүртгэлийн эхлэх/дуусах огноог бүрэн бөглөнө үү."
+      : "Please fill in the exam name, date, location, and registration dates.";
   if (
     !form.name.trim() ||
     !form.examDate ||
@@ -625,11 +614,6 @@ function validateExamForm(form: ExamForm, lang: "mn" | "en"): string | null {
   const year = Number(form.year);
   if (!Number.isInteger(year) || year < 2000) {
     return lang === "mn" ? "Оныг зөв оруулна уу." : "Enter a valid year.";
-  }
-
-  const totalSeats = Number(form.totalSeats);
-  if (!Number.isInteger(totalSeats) || totalSeats < 1) {
-    return lang === "mn" ? "Нийт суудал 1-ээс их байх ёстой." : "Total seats must be at least 1.";
   }
 
   if (form.registrationEnd < form.registrationStart) {
