@@ -22,6 +22,8 @@ backend/target/
 .env
 .env.local
 *.local
+backend/.env
+backend/src/main/resources/application.properties
 uploads/
 backend/uploads/
 
