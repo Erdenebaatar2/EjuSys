@@ -1,13 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
+import type { Lang } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Calendar, MapPin, Phone, Home, GraduationCap } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  GraduationCap,
+  Hash,
+  Home,
+  Languages,
+  Loader2,
+  MapPin,
+  Phone,
+  School,
+  UserRound,
+} from "lucide-react";
 import { formatDate, subjectLabel } from "@/lib/eju-format";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/student/applications/$id")({
   head: () => ({ meta: [{ title: "Бүртгэлийн дэлгэрэнгүй | EJU" }] }),
@@ -23,12 +36,28 @@ interface SelectedSubject {
 
 interface ApplicationDetailRecord {
   applicationNumber: string;
-  status: string;
   paymentStatus: string;
-  rejectionReason?: string | null;
-  phone?: string | null;
+  photoUrl?: string | null;
+  nameAlphabet?: string | null;
+  nameKanji?: string | null;
+  sex?: string | null;
+  dateOfBirth?: string | null;
+  nationality?: string | null;
+  countryCode?: string | null;
   address?: string | null;
+  postalCode?: string | null;
+  addressCode?: string | null;
+  telephone?: string | null;
+  mobilePhone?: string | null;
+  phone?: string | null;
+  schoolOrOccupation?: string | null;
   targetUniversity?: string | null;
+  scienceOption1?: string | null;
+  scienceOption2?: string | null;
+  mathCourse?: string | null;
+  examLanguage?: string | null;
+  jassoScholarshipApply?: boolean | null;
+  examSite?: string | null;
   createdAt: string;
   exam: {
     name: string;
@@ -60,6 +89,7 @@ function AppDetail() {
       </div>
     );
   }
+
   if (!app) {
     return (
       <div>
@@ -76,7 +106,7 @@ function AppDetail() {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="max-w-6xl space-y-5">
       <Button asChild variant="ghost" size="sm">
         <Link to="/student/applications">
           <ArrowLeft className="mr-1.5 h-4 w-4" />{" "}
@@ -86,83 +116,150 @@ function AppDetail() {
 
       <Card className="shadow-card">
         <CardHeader>
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <code className="text-xs bg-muted px-2 py-0.5 rounded">{app.applicationNumber}</code>
+              <code className="rounded bg-muted px-2 py-0.5 text-xs">{app.applicationNumber}</code>
               <CardTitle className="mt-2 text-2xl">{app.exam?.name}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {lang === "mn"
+                  ? "Бүртгүүлэхдээ оруулсан мэдээлэл болон шалгалтын дэлгэрэнгүй."
+                  : "Registration details you submitted and exam information."}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <StatusBadge status={app.status} />
-              <StatusBadge status={app.paymentStatus} />
-            </div>
+            <StatusBadge status={app.paymentStatus} />
           </div>
         </CardHeader>
-        <CardContent className="space-y-5">
-          {app.status === "rejected" && app.rejectionReason && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                <strong>{lang === "mn" ? "Татгалзсан шалтгаан:" : "Reason for rejection:"}</strong>{" "}
-                {app.rejectionReason}
-              </AlertDescription>
-            </Alert>
-          )}
-          {app.status === "approved" && (
-            <Alert className="border-success/30 bg-success/10">
-              <AlertDescription className="text-success">
-                {lang === "mn"
-                  ? "Таны бүртгэл зөвшөөрөгдсөн!"
-                  : "Your application has been approved!"}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+        <CardContent className="space-y-6">
+          <Section title={lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}>
             <Field
               icon={Calendar}
               label={lang === "mn" ? "Шалгалтын өдөр" : "Exam date"}
               value={formatDate(app.exam.examDate, lang)}
             />
+            <Field icon={MapPin} label={lang === "mn" ? "Байршил" : "Location"} value={app.exam.location} />
+            <Field
+              icon={Hash}
+              label={lang === "mn" ? "Бүртгэлийн дугаар" : "Application number"}
+              value={app.applicationNumber}
+            />
             <Field
               icon={MapPin}
-              label={lang === "mn" ? "Байршил" : "Location"}
-              value={app.exam.location}
+              label={lang === "mn" ? "Шалгалтын төв" : "Exam site"}
+              value={valueOrDash(app.examSite)}
             />
-            <Field icon={Phone} label={lang === "mn" ? "Утас" : "Phone"} value={app.phone || "—"} />
+          </Section>
+
+          <Section title={lang === "mn" ? "Хувийн мэдээлэл" : "Personal information"}>
             <Field
-              icon={Home}
-              label={lang === "mn" ? "Хаяг" : "Address"}
-              value={app.address || "—"}
+              icon={UserRound}
+              label={lang === "mn" ? "Нэр (Alphabet)" : "Name alphabet"}
+              value={valueOrDash(app.nameAlphabet)}
             />
-            {app.targetUniversity && (
-              <Field
-                icon={GraduationCap}
-                label={lang === "mn" ? "Очих их сургууль" : "Target university"}
-                value={app.targetUniversity}
-              />
-            )}
-          </div>
+            <Field
+              icon={UserRound}
+              label={lang === "mn" ? "Нэр (Kanji)" : "Name kanji"}
+              value={valueOrDash(app.nameKanji)}
+            />
+            <Field icon={UserRound} label={lang === "mn" ? "Хүйс" : "Sex"} value={sexLabel(app.sex, lang)} />
+            <Field
+              icon={Calendar}
+              label={lang === "mn" ? "Төрсөн огноо" : "Date of birth"}
+              value={app.dateOfBirth ? formatDate(app.dateOfBirth, lang) : "-"}
+            />
+            <Field
+              icon={Languages}
+              label={lang === "mn" ? "Иргэншил" : "Nationality"}
+              value={valueOrDash(app.nationality)}
+            />
+          </Section>
+
+          <Section title={lang === "mn" ? "Холбоо барих болон хаяг" : "Contact and address"}>
+            <Field icon={Phone} label={lang === "mn" ? "Утас" : "Phone"} value={valueOrDash(app.phone)} />
+            <Field
+              icon={Phone}
+              label={lang === "mn" ? "Суурин утас" : "Telephone"}
+              value={valueOrDash(app.telephone)}
+            />
+            <Field
+              icon={Phone}
+              label={lang === "mn" ? "Гар утас" : "Mobile phone"}
+              value={valueOrDash(app.mobilePhone)}
+            />
+            <Field icon={Home} label={lang === "mn" ? "Хаяг" : "Address"} value={valueOrDash(app.address)} />
+            <Field
+              icon={Hash}
+              label={lang === "mn" ? "Шуудангийн код" : "Postal code"}
+              value={valueOrDash(app.postalCode)}
+            />
+            <Field
+              icon={Hash}
+              label={lang === "mn" ? "Хаягийн код" : "Address code"}
+              value={valueOrDash(app.addressCode)}
+            />
+            <Field
+              icon={Hash}
+              label={lang === "mn" ? "Улсын код" : "Country code"}
+              value={valueOrDash(app.countryCode)}
+            />
+            <Field
+              icon={School}
+              label={lang === "mn" ? "Сургууль / ажил" : "School or occupation"}
+              value={valueOrDash(app.schoolOrOccupation)}
+            />
+            <Field
+              icon={GraduationCap}
+              label={lang === "mn" ? "Орохыг хүссэн сургууль" : "Target university"}
+              value={valueOrDash(app.targetUniversity)}
+            />
+          </Section>
 
           <div>
-            <div className="text-sm font-semibold mb-2">
+            <div className="mb-2 text-sm font-semibold">
               {lang === "mn" ? "Сонгосон хичээл" : "Selected subjects"}
             </div>
             <div className="flex flex-wrap gap-2">
-              {app.subjects.map((s, i) => (
+              {app.subjects.map((subject) => (
                 <span
-                  key={i}
+                  key={subject.code}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs"
                 >
-                  <code className="text-muted-foreground">{s.code}</code>
-                  <span>{lang === "mn" ? s.nameMn : subjectLabel(s.code, lang)}</span>
+                  <code className="text-muted-foreground">{subject.code}</code>
+                  <span>{lang === "mn" ? subject.nameMn : subjectLabel(subject.code, lang)}</span>
                 </span>
               ))}
-              {app.subjects.length === 0 && (
-                <span className="text-xs text-muted-foreground">—</span>
-              )}
+              {app.subjects.length === 0 && <span className="text-xs text-muted-foreground">-</span>}
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground border-t border-border pt-3">
+          <Section title={lang === "mn" ? "Шалгалтад сонгосон мэдээлэл" : "Exam choices"}>
+            <Field
+              icon={BookOpen}
+              label={lang === "mn" ? "Science option 1" : "Science option 1"}
+              value={formatEnum(app.scienceOption1)}
+            />
+            <Field
+              icon={BookOpen}
+              label={lang === "mn" ? "Science option 2" : "Science option 2"}
+              value={formatEnum(app.scienceOption2)}
+            />
+            <Field
+              icon={BookOpen}
+              label={lang === "mn" ? "Математикийн курс" : "Math course"}
+              value={formatEnum(app.mathCourse)}
+            />
+            <Field
+              icon={Languages}
+              label={lang === "mn" ? "Шалгалтын хэл" : "Exam language"}
+              value={formatEnum(app.examLanguage)}
+            />
+            <Field
+              icon={GraduationCap}
+              label={lang === "mn" ? "JASSO тэтгэлэг" : "JASSO scholarship"}
+              value={yesNo(app.jassoScholarshipApply, lang)}
+            />
+          </Section>
+
+          <div className="border-t border-border pt-3 text-xs text-muted-foreground">
             {lang === "mn" ? "Илгээсэн:" : "Submitted:"} {formatDate(app.createdAt, lang)}
           </div>
         </CardContent>
@@ -171,22 +268,53 @@ function AppDetail() {
   );
 }
 
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-2 text-sm font-semibold">{title}</h2>
+      <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    </section>
+  );
+}
+
 function Field({
   icon: Icon,
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
 }) {
   return (
     <div className="flex items-start gap-2.5 rounded-md border border-border p-3">
-      <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
       <div className="min-w-0">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="font-medium truncate">{value}</div>
+        <div className="break-words font-medium">{value}</div>
       </div>
     </div>
   );
+}
+
+function valueOrDash(value?: string | null) {
+  return value?.trim() ? value : "-";
+}
+
+function formatEnum(value?: string | null) {
+  return value?.trim() ? value.replaceAll("_", " ") : "-";
+}
+
+function yesNo(value: boolean | null | undefined, lang: Lang) {
+  if (value == null) return "-";
+  if (lang === "mn") return value ? "Тийм" : "Үгүй";
+  return value ? "Yes" : "No";
+}
+
+function sexLabel(value: string | null | undefined, lang: Lang) {
+  const normalized = value?.toUpperCase();
+  if (!normalized) return "-";
+  if (normalized === "M" || normalized === "MALE") return lang === "mn" ? "Эр" : "Male";
+  if (normalized === "F" || normalized === "FEMALE") return lang === "mn" ? "Эм" : "Female";
+  return valueOrDash(value);
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { LayoutDashboard, CalendarSearch, FileText, User } from "lucide-react";
+import { CalendarSearch, FileText, LayoutDashboard, MessageSquare } from "lucide-react";
 
 export const Route = createFileRoute("/student")({
   component: StudentLayout,
@@ -30,10 +30,10 @@ function StudentLayout() {
           icon: FileText,
         },
         {
-          to: "/student/profile",
-          labelMn: "Профайл",
-          labelJa: "Profile",
-          icon: User,
+          to: "/student/requests",
+          labelMn: "Хүсэлт",
+          labelJa: "Request",
+          icon: MessageSquare,
         },
       ]}
     />

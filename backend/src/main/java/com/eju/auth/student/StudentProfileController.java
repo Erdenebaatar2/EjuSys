@@ -55,10 +55,24 @@ public class StudentProfileController {
             profile.setLastName(body.get("lastName"));
             user.setLastName(body.get("lastName"));
         }
+        if (body.containsKey("email")) {
+            String email = blankToNull(body.get("email"));
+            if (email == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
+            }
+            String normalizedEmail = email.toLowerCase();
+            userRepo.findByEmailIgnoreCase(normalizedEmail)
+                    .filter(existing -> !existing.getId().equals(userId))
+                    .ifPresent(existing -> {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
+                    });
+            profile.setEmail(normalizedEmail);
+            user.setEmail(normalizedEmail);
+        }
         if (body.containsKey("phone")) profile.setPhone(blankToNull(body.get("phone")));
         if (body.containsKey("address")) profile.setAddress(blankToNull(body.get("address")));
         if (body.containsKey("profilePhotoPath")) profile.setProfilePhotoPath(blankToNull(body.get("profilePhotoPath")));
-        if (body.containsKey("passportNumber") && isBlank(profile.getPassportNumber())) {
+        if (body.containsKey("passportNumber")) {
             profile.setPassportNumber(blankToEmpty(body.get("passportNumber")));
         }
 

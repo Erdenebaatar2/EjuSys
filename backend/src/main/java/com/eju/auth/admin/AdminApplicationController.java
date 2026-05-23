@@ -102,45 +102,7 @@ public class AdminApplicationController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    public record StatusBody(String reason) {}
     public record PaymentBody(String status) {}
-
-    @PatchMapping("/{id}/approve")
-    public ResponseEntity<?> approve(@PathVariable UUID id) {
-        return appRepo.findById(id).<ResponseEntity<?>>map(a -> {
-            if (a.getStatus() != Application.Status.APPROVED) {
-                a.setStatus(Application.Status.APPROVED);
-                a.setRejectionReason(null);
-                appRepo.save(a);
-                examRepo.findById(a.getExamId()).ifPresent(ex -> {
-                    if (hasSeatLimit(ex)) {
-                        ex.setAvailableSeats(Math.max(0, ex.getAvailableSeats() - 1));
-                        examRepo.save(ex);
-                    }
-                });
-            }
-            return ResponseEntity.ok(enrich(a));
-        }).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PatchMapping("/{id}/reject")
-    public ResponseEntity<?> reject(@PathVariable UUID id, @RequestBody StatusBody body) {
-        return appRepo.findById(id).<ResponseEntity<?>>map(a -> {
-            boolean wasApproved = a.getStatus() == Application.Status.APPROVED;
-            a.setStatus(Application.Status.REJECTED);
-            a.setRejectionReason(body.reason());
-            appRepo.save(a);
-            if (wasApproved) {
-                examRepo.findById(a.getExamId()).ifPresent(ex -> {
-                    if (hasSeatLimit(ex)) {
-                        ex.setAvailableSeats(ex.getAvailableSeats() + 1);
-                        examRepo.save(ex);
-                    }
-                });
-            }
-            return ResponseEntity.ok(enrich(a));
-        }).orElseGet(() -> ResponseEntity.notFound().build());
-    }
 
     @PatchMapping("/{id}/payment")
     public ResponseEntity<?> setPayment(@PathVariable UUID id, @RequestBody PaymentBody body) {

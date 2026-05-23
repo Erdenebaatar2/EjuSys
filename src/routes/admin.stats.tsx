@@ -33,7 +33,6 @@ import { Label } from "@/components/ui/label";
 import {
   BarChart3,
   CheckCircle2,
-  Clock3,
   Download,
   Loader2,
   PieChart as PieChartIcon,
@@ -48,9 +47,6 @@ export const Route = createFileRoute("/admin/stats")({
 type StatsResponse = {
   kpi: {
     totalApplications: number;
-    approved: number;
-    pending: number;
-    rejected: number;
     paid: number;
     unpaid: number;
   };
@@ -333,30 +329,12 @@ function AdminStatsPage() {
         </AdminPanel>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <AdminMetricCard
               icon={BarChart3}
               label={lang === "mn" ? "Нийт өргөдөл" : "Total"}
               value={data.kpi.totalApplications}
               tone="blue"
-            />
-            <AdminMetricCard
-              icon={CheckCircle2}
-              label={lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
-              value={data.kpi.approved}
-              tone="emerald"
-            />
-            <AdminMetricCard
-              icon={Clock3}
-              label={lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
-              value={data.kpi.pending}
-              tone="amber"
-            />
-            <AdminMetricCard
-              icon={XCircle}
-              label={lang === "mn" ? "Татгалзсан" : "Rejected"}
-              value={data.kpi.rejected}
-              tone="rose"
             />
             <AdminMetricCard
               icon={CheckCircle2}

@@ -121,11 +121,25 @@ function PaymentPage() {
     if (!data?.deeplinks) return [];
     try {
       const parsed: unknown = JSON.parse(data.deeplinks);
-      return Array.isArray(parsed) ? (parsed as Deeplink[]) : [];
+      return Array.isArray(parsed)
+        ? (parsed as Deeplink[]).filter((item) => item.name !== "demo")
+        : [];
     } catch {
       return [];
     }
   }, [data?.deeplinks]);
+
+  function checkPayment() {
+    if (data?.demo) {
+      demoCompleteMut.mutate();
+      return;
+    }
+    void qc.fetchQuery({
+      queryKey: ["payment", "status", id],
+      queryFn: () =>
+        apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
+    });
+  }
 
   if (isPaid) {
     return (
@@ -229,16 +243,15 @@ function PaymentPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                void qc.fetchQuery({
-                  queryKey: ["payment", "status", id],
-                  queryFn: () =>
-                    apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
-                });
-              }}
+              onClick={checkPayment}
+              disabled={demoCompleteMut.isPending}
             >
-              <RefreshCw className="h-4 w-4" />
-              {lang === "mn" ? "Шинэчлэх" : "Refresh"}
+              {demoCompleteMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {lang === "mn" ? "Төлбөр шалгах" : "Check payment"}
             </Button>
           </>
         }
@@ -269,14 +282,18 @@ function PaymentPage() {
               )}
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {data?.demo
-                  ? lang === "mn"
-                    ? "Demo QPay горим идэвхтэй."
-                    : "Demo QPay mode is active."
-                  : lang === "mn"
-                    ? "Төлбөр төлөгдөхийг хүлээж байна..."
-                    : "Waiting for payment confirmation..."}
+                {lang === "mn"
+                  ? "Банкны апп-аар төлсний дараа төлбөрөө шалгана уу."
+                  : "After paying in your bank app, check the payment."}
               </div>
+              <Button
+                className="mt-4 w-64"
+                onClick={checkPayment}
+                disabled={demoCompleteMut.isPending}
+              >
+                {demoCompleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {lang === "mn" ? "Төлбөр шалгах" : "Check payment"}
+              </Button>
             </div>
 
             <div className="space-y-3">
@@ -292,16 +309,6 @@ function PaymentPage() {
                 label={lang === "mn" ? "Төлөв" : "Status"}
                 value={data?.status ?? "NEW"}
               />
-              {data?.demo ? (
-                <Button
-                  className="w-full"
-                  onClick={() => demoCompleteMut.mutate()}
-                  disabled={demoCompleteMut.isPending}
-                >
-                  {demoCompleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {lang === "mn" ? "Demo төлбөр дуусгах" : "Complete demo payment"}
-                </Button>
-              ) : null}
             </div>
           </div>
         </StudentPanel>

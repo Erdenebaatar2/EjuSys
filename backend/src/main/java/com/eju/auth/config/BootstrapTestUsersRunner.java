@@ -1,6 +1,7 @@
 package com.eju.auth.config;
 
 import com.eju.auth.application.Application;
+import com.eju.auth.application.ApplicationNumberService;
 import com.eju.auth.application.ApplicationRepository;
 import com.eju.auth.exam.Exam;
 import com.eju.auth.exam.ExamRepository;
@@ -34,16 +35,18 @@ public class BootstrapTestUsersRunner implements CommandLineRunner {
     private final ProfileRepository profileRepo;
     private final ExamRepository examRepo;
     private final ApplicationRepository appRepo;
+    private final ApplicationNumberService applicationNumberService;
     private final PasswordEncoder encoder;
     private final boolean enabled;
     private final int count;
     private final String password;
 
     public BootstrapTestUsersRunner(UserRepository userRepo,
-                                    ProfileRepository profileRepo,
-                                    ExamRepository examRepo,
-                                    ApplicationRepository appRepo,
-                                    PasswordEncoder encoder,
+                                     ProfileRepository profileRepo,
+                                     ExamRepository examRepo,
+                                     ApplicationRepository appRepo,
+                                     ApplicationNumberService applicationNumberService,
+                                     PasswordEncoder encoder,
                                     @Value("${app.bootstrap-test-users.enabled:false}") boolean enabled,
                                     @Value("${app.bootstrap-test-users.count:60}") int count,
                                     @Value("${app.bootstrap-test-users.password:Test1234!}") String password) {
@@ -51,6 +54,7 @@ public class BootstrapTestUsersRunner implements CommandLineRunner {
         this.profileRepo = profileRepo;
         this.examRepo = examRepo;
         this.appRepo = appRepo;
+        this.applicationNumberService = applicationNumberService;
         this.encoder = encoder;
         this.enabled = enabled;
         this.count = count;
@@ -96,14 +100,23 @@ public class BootstrapTestUsersRunner implements CommandLineRunner {
 
             upsertProfile(user, testName, email, i);
 
-            if (!appRepo.findActiveExamApplicationsByUserId(user.getId()).isEmpty()) {
+            List<Application> existingApps = appRepo.findActiveExamApplicationsByUserId(user.getId());
+            if (!existingApps.isEmpty()) {
+                existingApps.stream()
+                        .filter(app -> isLegacyTestNumber(app.getApplicationNumber()))
+                        .forEach(app -> {
+                            Exam exam = examRepo.findById(app.getExamId()).orElse(null);
+                            if (exam != null) {
+                                app.setApplicationNumber(applicationNumberService.nextNumber(exam, app));
+                                appRepo.save(app);
+                            }
+                        });
                 ensuredApplications++;
                 continue;
             }
 
             Exam exam = exams.get((i - 1) % exams.size());
             Application app = new Application();
-            app.setApplicationNumber("EJU-" + exam.getYear() + "-TEST" + String.format("%03d", i));
             app.setUserId(user.getId());
             app.setExamId(exam.getId());
             app.setStatus(Application.Status.APPROVED);
@@ -132,6 +145,7 @@ public class BootstrapTestUsersRunner implements CommandLineRunner {
             app.setExamLanguage(i % 4 == 0 ? Application.ExamLanguage.ENGLISH : Application.ExamLanguage.JAPANESE);
             app.setJassoScholarshipApply(i % 5 == 0);
             app.setExamSite(Application.ExamSite.values()[i % Application.ExamSite.values().length]);
+            app.setApplicationNumber(applicationNumberService.nextNumber(exam, app));
             appRepo.save(app);
             createdApplications++;
             ensuredApplications++;
@@ -139,6 +153,10 @@ public class BootstrapTestUsersRunner implements CommandLineRunner {
 
         log.info("BootstrapTestUsers: ensured {} test users and {} active exam applications; created {} users and {} applications.",
                 count, ensuredApplications, createdUsers, createdApplications);
+    }
+
+    private boolean isLegacyTestNumber(String applicationNumber) {
+        return applicationNumber != null && applicationNumber.matches("EJU-\\d{4}-TEST\\d{3}");
     }
 
     private void upsertProfile(User user, String testName, String email, int index) {

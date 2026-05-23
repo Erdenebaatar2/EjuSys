@@ -17,6 +17,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StudentRequestsRouteImport } from './routes/student.requests'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentExamsRouteImport } from './routes/student.exams'
 import { Route as StudentDashboardRouteImport } from './routes/student.dashboard'
@@ -24,6 +25,7 @@ import { Route as StudentApplicationsRouteImport } from './routes/student.applic
 import { Route as StudentApplicationRouteImport } from './routes/student.application'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStatsRouteImport } from './routes/admin.stats'
+import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
 import { Route as AdminExamsRouteImport } from './routes/admin.exams'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminApplicationsRouteImport } from './routes/admin.applications'
@@ -70,6 +72,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentRequestsRoute = StudentRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => StudentRoute,
+} as any)
 const StudentProfileRoute = StudentProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -103,6 +110,11 @@ const AdminStudentsRoute = AdminStudentsRouteImport.update({
 const AdminStatsRoute = AdminStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRequestsRoute = AdminRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminExamsRoute = AdminExamsRouteImport.update({
@@ -143,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/exams': typeof AdminExamsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/student/application': typeof StudentApplicationRoute
@@ -150,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/requests': typeof StudentRequestsRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
 }
@@ -165,6 +179,7 @@ export interface FileRoutesByTo {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/exams': typeof AdminExamsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/student/application': typeof StudentApplicationRoute
@@ -172,6 +187,7 @@ export interface FileRoutesByTo {
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/requests': typeof StudentRequestsRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
 }
@@ -188,6 +204,7 @@ export interface FileRoutesById {
   '/admin/applications': typeof AdminApplicationsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/exams': typeof AdminExamsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/stats': typeof AdminStatsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/student/application': typeof StudentApplicationRoute
@@ -195,6 +212,7 @@ export interface FileRoutesById {
   '/student/dashboard': typeof StudentDashboardRoute
   '/student/exams': typeof StudentExamsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/requests': typeof StudentRequestsRoute
   '/student/applications/$id': typeof StudentApplicationsIdRoute
   '/student/payment/$id': typeof StudentPaymentIdRoute
 }
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/dashboard'
     | '/admin/exams'
+    | '/admin/requests'
     | '/admin/stats'
     | '/admin/students'
     | '/student/application'
@@ -219,6 +238,7 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/requests'
     | '/student/applications/$id'
     | '/student/payment/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -234,6 +254,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/dashboard'
     | '/admin/exams'
+    | '/admin/requests'
     | '/admin/stats'
     | '/admin/students'
     | '/student/application'
@@ -241,6 +262,7 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/requests'
     | '/student/applications/$id'
     | '/student/payment/$id'
   id:
@@ -256,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/dashboard'
     | '/admin/exams'
+    | '/admin/requests'
     | '/admin/stats'
     | '/admin/students'
     | '/student/application'
@@ -263,6 +286,7 @@ export interface FileRouteTypes {
     | '/student/dashboard'
     | '/student/exams'
     | '/student/profile'
+    | '/student/requests'
     | '/student/applications/$id'
     | '/student/payment/$id'
   fileRoutesById: FileRoutesById
@@ -336,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/student/requests': {
+      id: '/student/requests'
+      path: '/requests'
+      fullPath: '/student/requests'
+      preLoaderRoute: typeof StudentRequestsRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/student/profile': {
       id: '/student/profile'
       path: '/profile'
@@ -385,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStatsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/requests': {
+      id: '/admin/requests'
+      path: '/requests'
+      fullPath: '/admin/requests'
+      preLoaderRoute: typeof AdminRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/exams': {
       id: '/admin/exams'
       path: '/exams'
@@ -427,6 +465,7 @@ interface AdminRouteChildren {
   AdminApplicationsRoute: typeof AdminApplicationsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminExamsRoute: typeof AdminExamsRoute
+  AdminRequestsRoute: typeof AdminRequestsRoute
   AdminStatsRoute: typeof AdminStatsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
 }
@@ -435,6 +474,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminApplicationsRoute: AdminApplicationsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminExamsRoute: AdminExamsRoute,
+  AdminRequestsRoute: AdminRequestsRoute,
   AdminStatsRoute: AdminStatsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
 }
@@ -458,6 +498,7 @@ interface StudentRouteChildren {
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentExamsRoute: typeof StudentExamsRoute
   StudentProfileRoute: typeof StudentProfileRoute
+  StudentRequestsRoute: typeof StudentRequestsRoute
   StudentPaymentIdRoute: typeof StudentPaymentIdRoute
 }
 
@@ -467,6 +508,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentDashboardRoute: StudentDashboardRoute,
   StudentExamsRoute: StudentExamsRoute,
   StudentProfileRoute: StudentProfileRoute,
+  StudentRequestsRoute: StudentRequestsRoute,
   StudentPaymentIdRoute: StudentPaymentIdRoute,
 }
 

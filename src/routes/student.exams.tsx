@@ -350,7 +350,11 @@ function ExamCard({
               variant="outline"
               className="w-full border-emerald-200 bg-emerald-50 text-emerald-700"
             >
-              <Link to="/student/applications" onClick={(event) => event.stopPropagation()}>
+              <Link
+                to="/student/applications/$id"
+                params={{ id: existingApplication?.id ?? "" }}
+                onClick={(event) => event.stopPropagation()}
+              >
                 <CheckCircle2 className="h-4 w-4" />
                 {lang === "mn" ? "Бүртгэл" : "Application"}
               </Link>

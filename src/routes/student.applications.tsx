@@ -17,7 +17,6 @@ import type { Lang } from "@/lib/i18n";
 import {
   ArrowRight,
   CalendarDays,
-  CheckCircle2,
   ClipboardList,
   CreditCard,
   FileText,
@@ -68,7 +67,6 @@ function StudentApplications() {
   }
 
   const hasApplication = Boolean(application);
-  const reviewStatus = application?.status ?? "-";
   const paymentStatus = application?.paymentStatus ?? "-";
   const paymentDone = paymentStatus === "paid";
 
@@ -80,8 +78,8 @@ function StudentApplications() {
         title={lang === "mn" ? "Миний бүртгэл" : "My application"}
         description={
           lang === "mn"
-            ? "Илгээсэн EJU бүртгэл, хяналтын төлөв, төлбөрийн мэдээллээ нэг дороос харна."
-            : "Review your submitted EJU application, review status, and payment state."
+            ? "Илгээсэн EJU бүртгэл, төлбөрийн мэдээллээ нэг дороос харна."
+            : "Review your submitted EJU application and payment state."
         }
         actions={
           <Button asChild>
@@ -93,22 +91,13 @@ function StudentApplications() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StudentMetricCard
           icon={ClipboardList}
           label={lang === "mn" ? "Нийт бүртгэл" : "Applications"}
           value={hasApplication ? 1 : 0}
           helper={lang === "mn" ? "Одоогийн илгээсэн бүртгэл" : "Current submitted record"}
           tone="blue"
-        />
-        <StudentMetricCard
-          icon={CheckCircle2}
-          label={lang === "mn" ? "Хяналтын төлөв" : "Review status"}
-          value={reviewStatus === "-" ? "-" : statusLabel(reviewStatus, lang)}
-          helper={lang === "mn" ? "Админы шалгалтын үр дүн" : "Admin review result"}
-          tone={
-            reviewStatus === "approved" ? "emerald" : reviewStatus === "rejected" ? "rose" : "amber"
-          }
         />
         <StudentMetricCard
           icon={CreditCard}
@@ -186,10 +175,6 @@ function StudentApplications() {
                 mono
               />
               <SummaryRow
-                label={lang === "mn" ? "Хяналт" : "Review"}
-                value={<StatusBadge status={application.status} />}
-              />
-              <SummaryRow
                 label={lang === "mn" ? "Төлбөр" : "Payment"}
                 value={<StatusBadge status={application.paymentStatus} />}
               />
@@ -240,7 +225,6 @@ function ApplicationCard({
             <Badge variant="outline" className="font-mono">
               {application.applicationNumber}
             </Badge>
-            <StatusBadge status={application.status} />
             <StatusBadge status={application.paymentStatus} />
           </div>
           <h2 className="mt-3 text-lg font-semibold text-foreground">

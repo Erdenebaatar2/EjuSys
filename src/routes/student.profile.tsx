@@ -57,6 +57,8 @@ interface ProfileData {
 interface EditForm {
   firstName: string;
   lastName: string;
+  email: string;
+  passportNumber: string;
   phone: string;
   address: string;
   profilePhotoPath: string;
@@ -80,6 +82,8 @@ function ProfilePage() {
       apiPut<ProfileData>("/api/student/profile", {
         firstName: payload.firstName,
         lastName: payload.lastName,
+        email: payload.email,
+        passportNumber: payload.passportNumber,
         phone: payload.phone || null,
         address: payload.address || null,
         profilePhotoPath: payload.profilePhotoPath || null,
@@ -115,6 +119,8 @@ function ProfilePage() {
     setEditForm({
       firstName: profile.firstName ?? "",
       lastName: profile.lastName ?? "",
+      email: profile.email ?? "",
+      passportNumber: profile.passportNumber ?? "",
       phone: profile.phone ?? "",
       address: profile.address ?? "",
       profilePhotoPath: profile.profilePhotoPath ?? "",
@@ -204,7 +210,7 @@ function ProfilePage() {
           icon={CreditCard}
           label={lang === "mn" ? "Паспорт" : "Passport"}
           value={profile.passportNumber || "-"}
-          helper={lang === "mn" ? "Бүртгүүлэхэд оруулсан дугаар" : "Entered at registration"}
+          helper={lang === "mn" ? "Профайл дээр засах боломжтой" : "Editable in your profile"}
           tone="violet"
         />
       </div>
@@ -281,11 +287,11 @@ function ProfilePage() {
           </StudentPanel>
 
           <StudentPanel
-            title={lang === "mn" ? "Өөрчлөх боломжгүй мэдээлэл" : "Read-only information"}
+            title={lang === "mn" ? "Нэвтрэх ба паспортын мэдээлэл" : "Login and passport information"}
             description={
               lang === "mn"
-                ? "Имэйл болон паспортын дугаар нь бүртгэлийн аюулгүй байдлын мэдээлэл."
-                : "Email and passport number are protected account details."
+                ? "Эдгээр нь профайл дээр засагдана. Шалгалтад илгээсэн бүртгэлийн мэдээлэл тусдаа хадгалагдана."
+                : "These can be updated here. Submitted exam application details stay unchanged."
             }
           >
             <div className="grid gap-3 sm:grid-cols-2">
@@ -371,6 +377,24 @@ function ProfilePage() {
               </EditField>
             </div>
 
+            <EditField label={lang === "mn" ? "Имэйл" : "Email"} icon={Mail}>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(event) => setEditForm({ ...editForm, email: event.target.value })}
+                required
+              />
+            </EditField>
+
+            <EditField label={lang === "mn" ? "Паспорт дугаар" : "Passport number"} icon={CreditCard}>
+              <Input
+                value={editForm.passportNumber}
+                onChange={(event) =>
+                  setEditForm({ ...editForm, passportNumber: event.target.value })
+                }
+              />
+            </EditField>
+
             <EditField label={lang === "mn" ? "Утас" : "Phone"} icon={Phone}>
               <Input
                 value={editForm.phone}
@@ -410,6 +434,8 @@ function emptyEditForm(): EditForm {
   return {
     firstName: "",
     lastName: "",
+    email: "",
+    passportNumber: "",
     phone: "",
     address: "",
     profilePhotoPath: "",

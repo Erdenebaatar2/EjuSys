@@ -8,7 +8,6 @@ import { AdminEmptyState, AdminPageHeader, AdminPanel } from "@/components/admin
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -33,10 +32,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/StatusBadge";
 import {
   CalendarDays,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -46,7 +43,6 @@ import {
   RotateCcw,
   Search,
   Trash2,
-  XCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/applications")({
@@ -57,12 +53,10 @@ export const Route = createFileRoute("/admin/applications")({
 interface ApplicationRow {
   id: string;
   applicationNumber: string;
-  status: string;
   paymentStatus: string;
   phone?: string | null;
   address?: string | null;
   targetUniversity?: string | null;
-  rejectionReason?: string | null;
   passportScanPath?: string | null;
   photoPath?: string | null;
   photoUrl?: string | null;
@@ -99,7 +93,6 @@ interface ListResponse {
 function AdminApplications() {
   const { lang } = useLang();
   const qc = useQueryClient();
-  const [status, setStatus] = useState<string>("all");
   const [paymentStatus, setPaymentStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [examId, setExamId] = useState<string>("all");
@@ -107,9 +100,7 @@ function AdminApplications() {
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<ApplicationRow | null>(null);
-  const [rejectFor, setRejectFor] = useState<ApplicationRow | null>(null);
   const [deleteFor, setDeleteFor] = useState<ApplicationRow | null>(null);
-  const [reason, setReason] = useState("");
 
   const { data: exams = [] } = useQuery({
     queryKey: ["admin", "exams", "for-filter"],
@@ -126,7 +117,6 @@ function AdminApplications() {
     queryKey: [
       "admin",
       "applications",
-      status,
       paymentStatus,
       examId,
       fromDate,
@@ -136,7 +126,6 @@ function AdminApplications() {
     ],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (status !== "all") params.set("status", status);
       if (paymentStatus !== "all") params.set("paymentStatus", paymentStatus);
       if (examId !== "all") params.set("examId", examId);
       if (fromDate) params.set("fromDate", fromDate);
@@ -147,29 +136,6 @@ function AdminApplications() {
       return apiGet<ListResponse>(`/api/admin/applications?${params}`);
     },
     retry: 1,
-  });
-
-  const approveMut = useMutation({
-    mutationFn: (id: string) => apiPatch(`/api/admin/applications/${id}/approve`),
-    onSuccess: () => {
-      toast.success(lang === "mn" ? "Зөвшөөрлөө" : "Approved");
-      void qc.invalidateQueries({ queryKey: ["admin", "applications"] });
-      void qc.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-    },
-    onError: (e) => toast.error((e as Error).message),
-  });
-
-  const rejectMut = useMutation({
-    mutationFn: (args: { id: string; reason: string }) =>
-      apiPatch(`/api/admin/applications/${args.id}/reject`, { reason: args.reason }),
-    onSuccess: () => {
-      toast.success(lang === "mn" ? "Татгалзлаа" : "Rejected");
-      setRejectFor(null);
-      setReason("");
-      void qc.invalidateQueries({ queryKey: ["admin", "applications"] });
-      void qc.invalidateQueries({ queryKey: ["admin", "dashboard"] });
-    },
-    onError: (e) => toast.error((e as Error).message),
   });
 
   const paymentMut = useMutation({
@@ -196,14 +162,13 @@ function AdminApplications() {
   const activeFilterCount = useMemo(
     () =>
       [
-        status !== "all",
         paymentStatus !== "all",
         examId !== "all",
         !!fromDate,
         !!toDate,
         !!search,
       ].filter(Boolean).length,
-    [examId, fromDate, paymentStatus, search, status, toDate],
+    [examId, fromDate, paymentStatus, search, toDate],
   );
   const total = data?.total ?? 0;
   const pageSize = data?.size ?? 20;
@@ -211,7 +176,6 @@ function AdminApplications() {
   const lastItem = Math.min((page + 1) * pageSize, total);
 
   function resetFilters() {
-    setStatus("all");
     setPaymentStatus("all");
     setExamId("all");
     setFromDate("");
@@ -224,12 +188,12 @@ function AdminApplications() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <AdminPageHeader
         icon={FileText}
-        eyebrow={lang === "mn" ? "Бүртгэлийн хяналт" : "Registration review"}
+        eyebrow={lang === "mn" ? "Бүртгэлийн удирдлага" : "Registration management"}
         title={lang === "mn" ? "Бүртгэл удирдах" : "Application management"}
         description={
           lang === "mn"
-            ? "Оюутны бүртгэлийг хайх, шүүх, төлөв өөрчлөх, дэлгэрэнгүй мэдээллийг шалгах хэсэг."
-            : "Search, filter, review, and update student application records."
+            ? "Оюутны бүртгэлийг хайх, шүүх, дэлгэрэнгүй мэдээллийг шалгах хэсэг."
+            : "Search, filter, and update student application records."
         }
       />
 
@@ -272,32 +236,6 @@ function AdminApplications() {
                 }}
               />
             </div>
-          </Field>
-
-          <Field label={lang === "mn" ? "Төлөв" : "Status"}>
-            <Select
-              value={status}
-              onValueChange={(v) => {
-                setStatus(v);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
-                <SelectItem value="pending">
-                  {lang === "mn" ? "Хүлээгдэж буй" : "Pending"}
-                </SelectItem>
-                <SelectItem value="approved">
-                  {lang === "mn" ? "Зөвшөөрсөн" : "Approved"}
-                </SelectItem>
-                <SelectItem value="rejected">
-                  {lang === "mn" ? "Татгалзсан" : "Rejected"}
-                </SelectItem>
-              </SelectContent>
-            </Select>
           </Field>
 
           <Field label={lang === "mn" ? "Төлбөр" : "Payment"}>
@@ -422,7 +360,6 @@ function AdminApplications() {
                 <TableHead className="px-5">{lang === "mn" ? "Дугаар" : "Number"}</TableHead>
                 <TableHead>{lang === "mn" ? "Оюутан" : "Student"}</TableHead>
                 <TableHead>{lang === "mn" ? "Шалгалт" : "Exam"}</TableHead>
-                <TableHead>{lang === "mn" ? "Төлөв" : "Status"}</TableHead>
                 <TableHead>{lang === "mn" ? "Төлбөр" : "Payment"}</TableHead>
                 <TableHead className="pr-5 text-right">
                   {lang === "mn" ? "Үйлдэл" : "Actions"}
@@ -453,9 +390,6 @@ function AdminApplications() {
                     <div className="mt-1 text-xs text-muted-foreground">{a.exam?.examDate}</div>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={a.status} />
-                  </TableCell>
-                  <TableCell>
                     <Select
                       value={a.paymentStatus}
                       onValueChange={(v) =>
@@ -484,27 +418,6 @@ function AdminApplications() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {a.status !== "approved" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title={lang === "mn" ? "Зөвшөөрөх" : "Approve"}
-                          onClick={() => approveMut.mutate(a.id)}
-                          disabled={approveMut.isPending}
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                        </Button>
-                      )}
-                      {a.status !== "rejected" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title={lang === "mn" ? "Татгалзах" : "Reject"}
-                          onClick={() => setRejectFor(a)}
-                        >
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
                       <Button
                         size="icon"
                         variant="ghost"
@@ -582,7 +495,6 @@ function AdminApplications() {
                 label={lang === "mn" ? "Зорилтот сургууль" : "Target university"}
                 value={detail.targetUniversity}
               />
-              <InfoField label={lang === "mn" ? "Төлөв" : "Status"} value={detail.status} />
               <InfoField
                 label={lang === "mn" ? "Зураг" : "Photo"}
                 value={detail.photoUrl ?? detail.photoPath}
@@ -604,50 +516,8 @@ function AdminApplications() {
                     .join(", ")}
                 />
               </div>
-              {detail.rejectionReason && (
-                <div className="sm:col-span-2">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    {lang === "mn" ? "Татгалзсан шалтгаан" : "Reject reason"}
-                  </div>
-                  <Badge variant="outline" className="mt-1 max-w-full whitespace-normal">
-                    {detail.rejectionReason}
-                  </Badge>
-                </div>
-              )}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!rejectFor} onOpenChange={(open) => !open && setRejectFor(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{lang === "mn" ? "Татгалзах шалтгаан" : "Reject reason"}</DialogTitle>
-            <DialogDescription>{rejectFor?.applicationNumber}</DialogDescription>
-          </DialogHeader>
-          <Textarea
-            rows={4}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder={
-              lang === "mn"
-                ? "Оюутанд харагдах тайлбарыг оруулна уу"
-                : "Enter a note visible to the student"
-            }
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectFor(null)}>
-              {lang === "mn" ? "Болих" : "Cancel"}
-            </Button>
-            <Button
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={!reason.trim() || rejectMut.isPending}
-              onClick={() => rejectFor && rejectMut.mutate({ id: rejectFor.id, reason })}
-            >
-              {rejectMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {lang === "mn" ? "Татгалзах" : "Reject"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

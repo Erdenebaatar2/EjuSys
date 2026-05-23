@@ -59,13 +59,12 @@ public class AdminStatsController {
                     }
                     return true;
                 })
-                .sorted(Comparator.comparing(Application::getCreatedAt))
+                .sorted(Comparator
+                        .comparing((Application a) -> isBootstrapTestApplication(a, profileMap))
+                        .thenComparing(Application::getCreatedAt))
                 .toList();
 
         long total = filtered.size();
-        long approved = filtered.stream().filter(a -> a.getStatus() == Application.Status.APPROVED).count();
-        long pending = filtered.stream().filter(a -> a.getStatus() == Application.Status.PENDING).count();
-        long rejected = filtered.stream().filter(a -> a.getStatus() == Application.Status.REJECTED).count();
         long paid = filtered.stream().filter(a -> a.getPaymentStatus() == Application.PaymentStatus.PAID).count();
         long unpaid = total - paid;
 
@@ -141,9 +140,6 @@ public class AdminStatsController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("kpi", Map.of(
                 "totalApplications", total,
-                "approved", approved,
-                "pending", pending,
-                "rejected", rejected,
                 "paid", paid,
                 "unpaid", unpaid
         ));
@@ -165,6 +161,13 @@ public class AdminStatsController {
                 ))
                 .toList());
         return response;
+    }
+
+    private boolean isBootstrapTestApplication(Application app, Map<UUID, Profile> profileMap) {
+        Profile profile = profileMap.get(app.getUserId());
+        String email = profile == null ? "" : String.valueOf(profile.getEmail()).toLowerCase();
+        return email.matches("test\\d+@example\\.com")
+                || String.valueOf(app.getNameAlphabet()).toUpperCase().startsWith("TEST USER ");
     }
 
     private Map<String, Object> studentRow(Profile profile, List<Application> applications) {

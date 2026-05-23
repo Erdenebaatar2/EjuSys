@@ -46,9 +46,9 @@ public class PaymentService {
             p.setApplicationId(app.getId());
             p.setSenderInvoiceNo(senderNo);
             p.setQpayInvoiceId("DEMO-" + app.getId());
-            p.setQrText("DEMO_QPAY:" + senderNo + ":" + props.getExamFee());
+            p.setQrText("QPAY2:" + senderNo + ":" + props.getExamFee());
             p.setQrImage(demoQrImage(senderNo));
-            p.setDeeplinksJson("[{\"name\":\"demo\",\"description\":\"Demo payment\",\"link\":\"#\"}]");
+            p.setDeeplinksJson("[]");
             p.setAmount(props.getExamFee());
             p.setStatus(Payment.Status.NEW);
             p = paymentRepo.save(p);
@@ -188,9 +188,9 @@ public class PaymentService {
                     <rect x="92" y="180" width="14" height="14"/><rect x="148" y="180" width="14" height="14"/><rect x="204" y="180" width="14" height="14"/>
                     <rect x="120" y="204" width="14" height="14"/><rect x="176" y="204" width="14" height="14"/>
                   </g>
-                  <text x="120" y="232" text-anchor="middle" font-family="Arial" font-size="10" fill="#4b5563">DEMO %s</text>
+                  <text x="120" y="232" text-anchor="middle" font-family="Arial" font-size="10" font-weight="700" fill="#111827">QPay2</text>
                 </svg>
-                """.formatted(label);
+                """;
         return "data:image/svg+xml;base64," + java.util.Base64.getEncoder()
                 .encodeToString(svg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }

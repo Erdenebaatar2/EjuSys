@@ -253,11 +253,25 @@ function QPayDialog({
     if (!data?.deeplinks) return [];
     try {
       const parsed: unknown = JSON.parse(data.deeplinks);
-      return Array.isArray(parsed) ? (parsed as Deeplink[]) : [];
+      return Array.isArray(parsed)
+        ? (parsed as Deeplink[]).filter((item) => item.name !== "demo")
+        : [];
     } catch {
       return [];
     }
   }, [data?.deeplinks]);
+
+  function checkPayment() {
+    if (data?.demo) {
+      demoCompleteMut.mutate();
+      return;
+    }
+    void qc.fetchQuery({
+      queryKey: ["payment", "qpay", applicationId],
+      queryFn: () =>
+        apiGet<PaymentResponse>(`/api/student/application/${applicationId}/payment/qpay/status`),
+    });
+  }
 
   return (
     <Dialog
@@ -349,24 +363,14 @@ function QPayDialog({
             )}
             <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/50 py-2.5 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {data?.demo
-                ? lang === "mn"
-                  ? "Demo QPay горим идэвхтэй."
-                  : "Demo QPay mode is active."
-                : lang === "mn"
-                  ? "Төлбөр хүлээж байна..."
-                  : "Waiting for payment confirmation..."}
+              {lang === "mn"
+                ? "Банкны апп-аар төлсний дараа төлбөрөө шалгана уу."
+                : "After paying in your bank app, check the payment."}
             </div>
-            {data?.demo && (
-              <Button
-                className="w-full"
-                onClick={() => demoCompleteMut.mutate()}
-                disabled={demoCompleteMut.isPending}
-              >
-                {demoCompleteMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {lang === "mn" ? "Demo төлбөр дуусгах" : "Complete demo payment"}
-              </Button>
-            )}
+            <Button className="w-full" onClick={checkPayment} disabled={demoCompleteMut.isPending}>
+              {demoCompleteMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {lang === "mn" ? "Төлбөр шалгах" : "Check payment"}
+            </Button>
             {deeplinks.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -399,18 +403,11 @@ function QPayDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  qc.fetchQuery({
-                    queryKey: ["payment", "qpay", applicationId],
-                    queryFn: () =>
-                      apiGet<PaymentResponse>(
-                        `/api/student/application/${applicationId}/payment/qpay/status`,
-                      ),
-                  })
-                }
+                onClick={checkPayment}
+                disabled={demoCompleteMut.isPending}
               >
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                {lang === "mn" ? "Шинэчлэх" : "Refresh"}
+                {lang === "mn" ? "Төлбөр шалгах" : "Check payment"}
               </Button>
             </div>
           </div>
@@ -522,8 +519,7 @@ export function ExamRegistrationSheet({
     [countryCode],
   );
 
-  const isReadonly =
-    appQuery.data?.status === "approved" || appQuery.data?.paymentStatus === "paid";
+  const isReadonly = appQuery.data?.paymentStatus === "paid";
 
   const handlePaid = useCallback(() => {
     setQpayAppId(null);
@@ -869,13 +865,6 @@ export function ExamRegistrationSheet({
                     </div>
                   )}
                 </FormSection>
-
-                {/* Rejection reason */}
-                {appQuery.data?.rejectionReason && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
-                    <p className="text-sm text-destructive">{appQuery.data.rejectionReason}</p>
-                  </div>
-                )}
 
                 {/* Submit */}
                 <div className="flex items-center gap-3 pt-2 pb-4 border-t sticky bottom-0 bg-background/95 backdrop-blur-sm -mx-6 px-6">

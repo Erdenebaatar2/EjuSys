@@ -1,10 +1,12 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, type ComponentType, type ReactNode, useState } from "react";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LangSwitcher } from "@/components/LangSwitcher";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { apiGet } from "@/lib/api";
 import {
   ArrowRight,
   ChevronRight,
@@ -34,6 +36,13 @@ interface DashboardLayoutProps {
   hideDesktopSidebar?: boolean;
 }
 
+interface StudentSidebarProfile {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  profilePhotoPath?: string | null;
+}
+
 export function DashboardLayout({
   requireRole,
   navItems,
@@ -48,6 +57,11 @@ export function DashboardLayout({
   const isAdmin = requireRole === "admin";
   const isStudent = requireRole === "student";
   const isPortal = isAdmin || isStudent;
+  const { data: studentProfile } = useQuery({
+    queryKey: ["student", "profile"],
+    queryFn: () => apiGet<StudentSidebarProfile>("/api/student/profile"),
+    enabled: Boolean(user && role === "student" && isStudent),
+  });
 
   useEffect(() => {
     if (!loading) {
@@ -57,6 +71,16 @@ export function DashboardLayout({
       }
     }
   }, [loading, user, role, requireRole, navigate]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setSidebarCollapsed(window.localStorage.getItem("dashboard-sidebar-collapsed") === "true");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("dashboard-sidebar-collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   if (loading || !user || role !== requireRole) {
     return (
@@ -92,34 +116,131 @@ export function DashboardLayout({
       ? activeItem.labelMn
       : activeItem.labelJa
     : layoutTitle;
+  const studentName = studentProfile
+    ? `${studentProfile.lastName ?? ""} ${studentProfile.firstName ?? ""}`.trim()
+    : "";
+  const sidebarName =
+    isStudent && studentName
+      ? studentName
+      : isStudent
+        ? `${user.lastName ?? ""} ${user.firstName ?? ""}`.trim() || "EJU"
+        : "EJU";
+  const sidebarSubtitle =
+    isStudent && (studentProfile?.email || user.email)
+      ? (studentProfile?.email ?? user.email)
+      : roleLabel;
+  const sidebarInitials =
+    initialsForSidebar(studentProfile?.firstName, studentProfile?.lastName) ||
+    initialsForSidebar(user.firstName, user.lastName) ||
+    user.email?.[0]?.toUpperCase() ||
+    "U";
+  const sidebarPhoto = mediaUrl(studentProfile?.profilePhotoPath);
 
-  const SidebarContent = ({ collapsed = false }: { collapsed?: boolean }) => (
+  const SidebarContent = ({
+    collapsed = false,
+    showCollapseToggle = false,
+  }: {
+    collapsed?: boolean;
+    showCollapseToggle?: boolean;
+  }) => (
     <>
       <div
         className={cn(
           "flex h-16 items-center border-b",
-          collapsed ? "justify-center px-3" : "gap-3 px-5",
+          collapsed ? "justify-between px-1.5" : "gap-3 px-5",
           isPortal ? "border-white/10" : "border-sidebar-border",
         )}
       >
-        <div
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-lg shadow-soft",
-            isPortal
-              ? "bg-white/10 text-white ring-1 ring-white/15"
-              : "bg-gradient-hero text-primary-foreground",
-          )}
-        >
-          <GraduationCap className="h-5 w-5" />
-        </div>
-        <div className={cn("min-w-0 leading-tight", collapsed && "hidden")}>
-          <div className={cn("text-sm font-bold tracking-tight", isPortal && "text-white")}>
-            EJU
-          </div>
-          <div className={cn("text-[11px]", isPortal ? "text-white/55" : "text-muted-foreground")}>
-            {roleLabel}
-          </div>
-        </div>
+        {isStudent ? (
+          <Link
+            to="/student/profile"
+            onClick={() => setOpen(false)}
+            title={collapsed ? sidebarName : undefined}
+            className={cn(
+              "flex min-w-0 items-center rounded-lg transition-colors",
+              collapsed ? "justify-center" : "gap-3",
+              isPortal ? "text-white hover:bg-white/10" : "hover:bg-sidebar-accent/50",
+            )}
+          >
+            <SidebarAvatar
+              src={sidebarPhoto}
+              initials={sidebarInitials}
+              collapsed={collapsed}
+              portal={isPortal}
+            />
+            {!collapsed && (
+              <div className="min-w-0 leading-tight">
+                <div
+                  className={cn(
+                    "truncate text-sm font-bold tracking-tight",
+                    isPortal && "text-white",
+                  )}
+                >
+                  {sidebarName}
+                </div>
+                <div
+                  className={cn(
+                    "truncate text-[11px]",
+                    isPortal ? "text-white/55" : "text-muted-foreground",
+                  )}
+                >
+                  {sidebarSubtitle}
+                </div>
+              </div>
+            )}
+          </Link>
+        ) : (
+          <>
+            {!collapsed && (
+              <div
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-lg shadow-soft",
+                  isPortal
+                    ? "bg-white/10 text-white ring-1 ring-white/15"
+                    : "bg-gradient-hero text-primary-foreground",
+                )}
+              >
+                <GraduationCap className="h-5 w-5" />
+              </div>
+            )}
+            {!collapsed && (
+              <div className="min-w-0 leading-tight">
+                <div className={cn("text-sm font-bold tracking-tight", isPortal && "text-white")}>
+                  EJU
+                </div>
+                <div
+                  className={cn(
+                    "text-[11px]",
+                    isPortal ? "text-white/55" : "text-muted-foreground",
+                  )}
+                >
+                  {roleLabel}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {showCollapseToggle ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}
+            className={cn(
+              collapsed ? "h-7 w-7" : "ml-auto h-8 w-8",
+              isPortal
+                ? "text-white/70 hover:bg-white/10 hover:text-white"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        ) : null}
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
@@ -269,7 +390,7 @@ export function DashboardLayout({
               : "border-r border-sidebar-border bg-sidebar",
           )}
         >
-          <SidebarContent collapsed={sidebarCollapsed} />
+          <SidebarContent collapsed={sidebarCollapsed} showCollapseToggle />
         </aside>
       )}
 
@@ -355,4 +476,71 @@ export function DashboardLayout({
       </div>
     </div>
   );
+}
+
+function SidebarAvatar({
+  src,
+  initials,
+  collapsed,
+  portal,
+}: {
+  src: string;
+  initials: string;
+  collapsed: boolean;
+  portal: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [src]);
+
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-bold shadow-soft",
+        collapsed ? "h-8 w-8" : "h-10 w-10",
+        portal
+          ? "bg-white/10 text-white ring-1 ring-white/15"
+          : "bg-gradient-hero text-primary-foreground",
+      )}
+    >
+      {src && !failed ? (
+        <img
+          src={src}
+          alt="Profile"
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </div>
+  );
+}
+
+function initialsForSidebar(firstName?: string | null, lastName?: string | null): string {
+  const last = lastName?.trim()[0] ?? "";
+  const first = firstName?.trim()[0] ?? "";
+  return `${last}${first}`.toUpperCase();
+}
+
+function mediaUrl(path?: string | null): string {
+  if (!path) return "";
+  if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("blob:")) {
+    return path;
+  }
+  const normalized = path.startsWith("/uploads/")
+    ? path
+    : path.startsWith("uploads/")
+      ? `/${path}`
+      : `/uploads/${path}`;
+  return `${mediaBaseUrl()}${normalized}`;
+}
+
+function mediaBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (configured) return configured.replace(/\/$/, "");
+  if (typeof window !== "undefined" && window.location.port && window.location.port !== "8080") {
+    return "http://localhost:8080";
+  }
+  return "";
 }

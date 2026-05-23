@@ -30,7 +30,7 @@ const STYLE_IDS: Record<XlsxStyle, number> = {
 
 export function downloadXlsx(filename: string, options: XlsxOptions): void {
   const files = buildWorkbookFiles(options);
-  const blob = new Blob([zipStore(files)], {
+  const blob = new Blob([new Uint8Array(zipStore(files))], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
   const url = URL.createObjectURL(blob);
