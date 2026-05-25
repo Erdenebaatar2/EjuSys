@@ -47,38 +47,25 @@ public class StudentProfileController {
         User user = user(userId);
         Profile profile = profileRepo.findById(userId).orElseGet(() -> profileFromUser(user));
 
-        if (body.containsKey("firstName")) {
-            profile.setFirstName(body.get("firstName"));
-            user.setFirstName(body.get("firstName"));
+        if (containsLockedPersonalField(body)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Personal information cannot be changed after registration. Please contact an admin.");
         }
-        if (body.containsKey("lastName")) {
-            profile.setLastName(body.get("lastName"));
-            user.setLastName(body.get("lastName"));
-        }
-        if (body.containsKey("email")) {
-            String email = blankToNull(body.get("email"));
-            if (email == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required");
-            }
-            String normalizedEmail = email.toLowerCase();
-            userRepo.findByEmailIgnoreCase(normalizedEmail)
-                    .filter(existing -> !existing.getId().equals(userId))
-                    .ifPresent(existing -> {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
-                    });
-            profile.setEmail(normalizedEmail);
-            user.setEmail(normalizedEmail);
-        }
-        if (body.containsKey("phone")) profile.setPhone(blankToNull(body.get("phone")));
-        if (body.containsKey("address")) profile.setAddress(blankToNull(body.get("address")));
+
         if (body.containsKey("profilePhotoPath")) profile.setProfilePhotoPath(blankToNull(body.get("profilePhotoPath")));
-        if (body.containsKey("passportNumber")) {
-            profile.setPassportNumber(blankToEmpty(body.get("passportNumber")));
-        }
 
         userRepo.save(user);
         profileRepo.save(profile);
         return ResponseEntity.ok(toMap(profile));
+    }
+
+    private boolean containsLockedPersonalField(Map<String, String> body) {
+        return body.containsKey("firstName")
+                || body.containsKey("lastName")
+                || body.containsKey("email")
+                || body.containsKey("phone")
+                || body.containsKey("address")
+                || body.containsKey("passportNumber");
     }
 
     private User user(UUID userId) {

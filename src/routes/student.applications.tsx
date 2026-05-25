@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { ComponentType, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
@@ -19,6 +19,7 @@ import {
   CalendarDays,
   ClipboardList,
   CreditCard,
+  Download,
   FileText,
   Loader2,
   MapPin,
@@ -49,6 +50,7 @@ interface StudentApplicationSummary {
 
 function StudentApplications() {
   const { lang }: { lang: Lang } = useLang();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const { data: application, isLoading } = useQuery({
     queryKey: ["student", "application"],
@@ -57,6 +59,10 @@ function StudentApplications() {
         () => undefined,
       ),
   });
+
+  if (pathname !== "/student/applications") {
+    return <Outlet />;
+  }
 
   if (isLoading) {
     return (
@@ -192,6 +198,12 @@ function StudentApplications() {
                     </Link>
                   </Button>
                 ) : null}
+                <Button asChild className="w-full justify-between">
+                  <Link to="/student/applications/$id" params={{ id: application.id }}>
+                    {lang === "mn" ? "Applicant form харах" : "View applicant form"}
+                    <Download className="h-4 w-4" />
+                  </Link>
+                </Button>
                 <Button asChild variant="outline" className="w-full justify-between">
                   <Link to="/student/exams">
                     {lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}
@@ -244,6 +256,12 @@ function ApplicationCard({
             </Link>
           </Button>
         ) : null}
+        <Button asChild size="sm" variant="outline">
+          <Link to="/student/applications/$id" params={{ id: application.id }}>
+            <Download className="h-4 w-4" />
+            {lang === "mn" ? "Form" : "Form"}
+          </Link>
+        </Button>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">

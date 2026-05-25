@@ -65,10 +65,13 @@ export function statusLabel(status: string, lang: Lang = "mn"): string {
   const map: Record<string, { mn: string; en: string }> = {
     pending_payment: { mn: "Төлбөр хүлээгдэж буй", en: "Awaiting payment" },
     pending: { mn: "Хүлээгдэж буй", en: "Pending" },
+    confirmed: { mn: "Баталгаажсан", en: "Confirmed" },
     approved: { mn: "Зөвшөөрсөн", en: "Approved" },
     rejected: { mn: "Татгалзсан", en: "Rejected" },
     paid: { mn: "Төлсөн", en: "Paid" },
     unpaid: { mn: "Төлөөгүй", en: "Unpaid" },
+    failed: { mn: "Амжилтгүй", en: "Failed" },
+    expired: { mn: "Хугацаа дууссан", en: "Expired" },
   };
   return map[status]?.[lang] ?? status;
 }
@@ -91,14 +94,15 @@ export function categoryLabel(cat: string, lang: Lang = "mn"): string {
 
 export function subjectLabel(code: string, lang: Lang = "mn"): string {
   const map: Record<string, { mn: string; en: string }> = {
-    J1: { mn: "Япон хэл (дээд түвшин)", en: "Japanese (advanced)" },
-    J2: { mn: "Япон хэл (суурь түвшин)", en: "Japanese (basic)" },
-    K1: { mn: "Математик курс 1", en: "Mathematics course 1" },
-    K2: { mn: "Математик курс 2", en: "Mathematics course 2" },
+    J1: { mn: "Япон хэл", en: "Japanese" },
+    J2: { mn: "Япон хэл", en: "Japanese" },
+    SCI: { mn: "Шинжлэх ухаан", en: "Science" },
+    K1: { mn: "Математик", en: "Mathematics" },
+    K2: { mn: "Математик", en: "Mathematics" },
     PHY: { mn: "Физик", en: "Physics" },
     CHEM: { mn: "Хими", en: "Chemistry" },
     BIO: { mn: "Биологи", en: "Biology" },
-    GEN: { mn: "Ерөнхий хичээл", en: "General subjects" },
+    GEN: { mn: "Japan and the World", en: "Japan and the World" },
   };
   return map[code]?.[lang] ?? code;
 }

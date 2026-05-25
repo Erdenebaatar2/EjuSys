@@ -30,6 +30,7 @@ import {
   Info,
   Loader2,
   MapPin,
+  FileText,
   Timer,
 } from "lucide-react";
 import { formatDate, isRegistrationOpen, sessionLabel } from "@/lib/eju-format";
@@ -355,8 +356,8 @@ function ExamCard({
                 params={{ id: existingApplication?.id ?? "" }}
                 onClick={(event) => event.stopPropagation()}
               >
-                <CheckCircle2 className="h-4 w-4" />
-                {lang === "mn" ? "Бүртгэл" : "Application"}
+                <FileText className="h-4 w-4" />
+                {lang === "mn" ? "Applicant form" : "Applicant form"}
               </Link>
             </Button>
           ) : (

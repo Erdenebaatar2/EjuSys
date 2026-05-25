@@ -9,7 +9,7 @@ import java.util.UUID;
 @Table(name = "payments")
 public class Payment {
 
-    public enum Status { NEW, PAID, FAILED }
+    public enum Status { NEW, PENDING, PAID, FAILED, EXPIRED }
 
     @Id
     @GeneratedValue

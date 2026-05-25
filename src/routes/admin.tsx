@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { BarChart3, BookOpen, FileText, LayoutDashboard, MessageSquare } from "lucide-react";
+import { BarChart3, BookOpen, FileText, LayoutDashboard, MessageSquare, Users } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -28,6 +28,12 @@ function AdminLayout() {
           labelMn: "Бүртгэлүүд",
           labelJa: "Applications",
           icon: FileText,
+        },
+        {
+          to: "/admin/students",
+          labelMn: "Оюутнууд",
+          labelJa: "Students",
+          icon: Users,
         },
         {
           to: "/admin/requests",

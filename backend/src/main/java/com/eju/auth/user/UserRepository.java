@@ -38,4 +38,38 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                               @Param("adminRole") Role adminRole,
                               @Param("search") String search,
                               Pageable pageable);
+
+    @Query("""
+        select u from User u
+        where :studentRole member of u.roles
+          and :adminRole not member of u.roles
+          and not exists (
+            select 1 from Application a
+            where a.userId = u.id
+              and a.examId = :examId
+          )
+          and (
+            :search = ''
+            or lower(u.firstName) like lower(concat('%', :search, '%'))
+            or lower(u.lastName) like lower(concat('%', :search, '%'))
+            or lower(u.email) like lower(concat('%', :search, '%'))
+            or exists (
+              select 1 from Profile p
+              where p.id = u.id
+                and (
+                  lower(p.firstName) like lower(concat('%', :search, '%'))
+                  or lower(p.lastName) like lower(concat('%', :search, '%'))
+                  or lower(p.email) like lower(concat('%', :search, '%'))
+                  or lower(p.passportNumber) like lower(concat('%', :search, '%'))
+                  or lower(p.phone) like lower(concat('%', :search, '%'))
+                  or lower(p.address) like lower(concat('%', :search, '%'))
+                )
+            )
+          )
+    """)
+    Page<User> searchStudentsNotRegisteredForExam(@Param("studentRole") Role studentRole,
+                                                  @Param("adminRole") Role adminRole,
+                                                  @Param("examId") UUID examId,
+                                                  @Param("search") String search,
+                                                  Pageable pageable);
 }

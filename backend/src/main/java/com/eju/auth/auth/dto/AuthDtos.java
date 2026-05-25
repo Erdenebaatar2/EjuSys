@@ -21,8 +21,10 @@ public class AuthDtos {
             @NotBlank @Size(min = 6) String password,
             @NotBlank String firstName,
             @NotBlank String lastName,
-            String passportNumber,
-            String phone
+            @NotBlank String passportNumber,
+            @NotBlank String phone,
+            @NotBlank String address,
+            Boolean informationConfirmed
     ) {}
 
     public record UserResponse(

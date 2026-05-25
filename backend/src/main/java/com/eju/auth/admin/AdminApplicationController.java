@@ -117,7 +117,7 @@ public class AdminApplicationController {
     @Transactional
     public ResponseEntity<?> delete(@PathVariable UUID id) {
         return appRepo.findById(id).<ResponseEntity<?>>map(a -> {
-            if (a.getStatus() == Application.Status.APPROVED) {
+            if (a.getStatus() == Application.Status.APPROVED || a.getStatus() == Application.Status.CONFIRMED) {
                 examRepo.findById(a.getExamId()).ifPresent(ex -> {
                     if (hasSeatLimit(ex)) {
                         ex.setAvailableSeats(ex.getAvailableSeats() + 1);
@@ -188,6 +188,8 @@ public class AdminApplicationController {
             em.put("session", e.getSession().name().toLowerCase());
             em.put("examDate", e.getExamDate());
             em.put("location", e.getLocation());
+            em.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());
+            em.put("hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName());
             m.put("exam", em);
         }
         return m;

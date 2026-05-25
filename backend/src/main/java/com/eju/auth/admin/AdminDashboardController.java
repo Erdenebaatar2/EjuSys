@@ -35,7 +35,7 @@ public class AdminDashboardController {
     public Map<String, Object> stats() {
         long registeredStudents = appRepo.countDistinctUsersWithActiveExamApplications();
         long activeExams = examRepo.findByActiveTrueOrderByExamDateAsc().size();
-        List<Map<String, Object>> recent = appRepo.findTop5ByActiveExamOrderByCreatedAtDesc(PageRequest.of(0, 5)).stream()
+        List<Map<String, Object>> recent = appRepo.findTop5ByActiveExamOrderByCreatedAtDesc(PageRequest.of(0, 20)).stream()
                 .map(a -> {
                     Map<String, Object> m = new java.util.HashMap<>();
                     m.put("id", a.getId());

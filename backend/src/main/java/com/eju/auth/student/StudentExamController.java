@@ -41,13 +41,26 @@ public class StudentExamController {
     @GetMapping("/exams")
     public List<Map<String, Object>> getAvailableExams(Authentication auth) {
         UUID userId = auth == null ? null : (UUID) auth.getPrincipal();
-        return examRepo.findByActiveTrueOrderByExamDateAsc()
-                .stream()
+        Map<UUID, Application> applicationsByExamId = new HashMap<>();
+        if (userId != null) {
+            appRepo.findByUserId(userId).forEach(app -> applicationsByExamId.put(app.getExamId(), app));
+        }
+
+        Map<UUID, Exam> examsById = new LinkedHashMap<>();
+        examRepo.findByActiveTrueOrderByExamDateAsc()
+                .forEach(exam -> examsById.put(exam.getId(), exam));
+        if (!applicationsByExamId.isEmpty()) {
+            examRepo.findAllById(applicationsByExamId.keySet())
+                    .forEach(exam -> examsById.putIfAbsent(exam.getId(), exam));
+        }
+
+        return examsById.values().stream()
+                .sorted(Comparator.comparing(Exam::getExamDate))
                 .map(e -> {
                     Map<String, Object> result = new HashMap<>(toMap(e));
-                    if (userId != null) {
-                        appRepo.findByUserIdAndExamId(userId, e.getId())
-                                .ifPresent(a -> result.put("existingApplication", applicationSummary(a)));
+                    Application existing = applicationsByExamId.get(e.getId());
+                    if (existing != null) {
+                        result.put("existingApplication", applicationSummary(existing));
                     }
                     return result;
                 })
@@ -77,8 +90,11 @@ public class StudentExamController {
         m.put("name", e.getName());
         m.put("examDate", e.getExamDate().toString());
         m.put("location", e.getLocation());
+        m.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());
+        m.put("hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName());
         m.put("totalSeats", e.getTotalSeats());
         m.put("availableSeats", e.getAvailableSeats());
+        m.put("examFee", e.getExamFee());
         m.put("registrationStart", e.getRegistrationStart().toString());
         m.put("registrationEnd", e.getRegistrationEnd().toString());
         m.put("session", e.getSession().name().toLowerCase());

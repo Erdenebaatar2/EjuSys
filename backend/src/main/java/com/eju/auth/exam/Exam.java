@@ -13,6 +13,22 @@ public class Exam {
 
     public enum Session { FIRST, SECOND }
 
+    public enum ExamHost {
+        ULAANBAATAR("Улаанбаатар"),
+        DARKHAN("Дархан"),
+        ERDENET("Эрдэнэт");
+
+        private final String displayName;
+
+        ExamHost(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
     @Id
     @GeneratedValue
     @Column(columnDefinition = "uuid")
@@ -28,6 +44,10 @@ public class Exam {
     @Column(nullable = false)
     private Session session;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "exam_host")
+    private ExamHost examHost = ExamHost.ULAANBAATAR;
+
     @Column(name = "exam_date", nullable = false)
     private LocalDate examDate;
 
@@ -39,6 +59,9 @@ public class Exam {
 
     @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
+
+    @Column(name = "exam_fee")
+    private Integer examFee = 70000;
 
     @Column(name = "registration_start", nullable = false)
     private LocalDate registrationStart;
@@ -76,10 +99,29 @@ public class Exam {
         updatedAt = createdAt;
         if (totalSeats == null) totalSeats = 0;
         if (availableSeats == null) availableSeats = totalSeats;
+        if (examFee == null) examFee = 70000;
+        normalizeHostFields();
     }
 
     @PreUpdate
-    void onUpdate() { updatedAt = Instant.now(); }
+    void onUpdate() {
+        updatedAt = Instant.now();
+        normalizeHostFields();
+    }
+
+    private void normalizeHostFields() {
+        if (examHost == null) examHost = ExamHost.ULAANBAATAR;
+        if (location == null || location.isBlank()) {
+            location = examHost.getDisplayName();
+        }
+        if ((name == null || name.isBlank()) && year != null && session != null) {
+            name = "EJU " + year + " " + sessionLabel(session) + " - " + examHost.getDisplayName();
+        }
+    }
+
+    private String sessionLabel(Session session) {
+        return session == Session.FIRST ? "1-р шалгалт" : "2-р шалгалт";
+    }
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -89,6 +131,8 @@ public class Exam {
     public void setYear(Integer year) { this.year = year; }
     public Session getSession() { return session; }
     public void setSession(Session session) { this.session = session; }
+    public ExamHost getExamHost() { return examHost; }
+    public void setExamHost(ExamHost examHost) { this.examHost = examHost; }
     public LocalDate getExamDate() { return examDate; }
     public void setExamDate(LocalDate examDate) { this.examDate = examDate; }
     public String getLocation() { return location; }
@@ -97,6 +141,8 @@ public class Exam {
     public void setTotalSeats(Integer totalSeats) { this.totalSeats = totalSeats; }
     public Integer getAvailableSeats() { return availableSeats; }
     public void setAvailableSeats(Integer availableSeats) { this.availableSeats = availableSeats; }
+    public Integer getExamFee() { return examFee; }
+    public void setExamFee(Integer examFee) { this.examFee = examFee; }
     public LocalDate getRegistrationStart() { return registrationStart; }
     public void setRegistrationStart(LocalDate v) { this.registrationStart = v; }
     public LocalDate getRegistrationEnd() { return registrationEnd; }

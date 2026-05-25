@@ -15,6 +15,9 @@ public interface ExamRepository extends JpaRepository<Exam, UUID> {
             LocalDate end
     );
     Optional<Exam> findFirstByActiveTrueOrderByExamDateAsc();
+    List<Exam> findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByRegistrationEndAsc(LocalDate date);
+    long countByActiveTrueAndYear(Integer year);
+    boolean existsByActiveTrueAndYearAndSession(Integer year, Exam.Session session);
 
     default Optional<Exam> findFirstRegistrationOpen(LocalDate today) {
         return findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today, today)

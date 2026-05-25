@@ -37,6 +37,10 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest req) {
+        if (req.informationConfirmed() == null || !req.informationConfirmed()) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("You must confirm that your official document information is correct"));
+        }
         if (userRepo.existsByEmailIgnoreCase(req.email())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new ErrorResponse("Email already registered"));
@@ -54,8 +58,9 @@ public class AuthController {
         p.setFirstName(req.firstName());
         p.setLastName(req.lastName());
         p.setEmail(req.email().toLowerCase());
-        p.setPassportNumber(req.passportNumber() != null ? req.passportNumber() : "");
+        p.setPassportNumber(req.passportNumber());
         p.setPhone(req.phone());
+        p.setAddress(req.address());
         profileRepo.save(p);
 
         return ResponseEntity.status(HttpStatus.CREATED)

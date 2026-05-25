@@ -31,7 +31,7 @@ type PaymentResponse = {
   invoiceId: string | null;
   senderInvoiceNo: string;
   amount: number;
-  status: "NEW" | "PAID" | "FAILED";
+  status: "NEW" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
   qrText: string | null;
   qrImage: string | null;
   deeplinks: string;
@@ -136,8 +136,7 @@ function PaymentPage() {
     }
     void qc.fetchQuery({
       queryKey: ["payment", "status", id],
-      queryFn: () =>
-        apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
+      queryFn: () => apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
     });
   }
 
@@ -241,11 +240,7 @@ function PaymentPage() {
                 {lang === "mn" ? "Бүртгэл" : "Application"}
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              onClick={checkPayment}
-              disabled={demoCompleteMut.isPending}
-            >
+            <Button variant="outline" onClick={checkPayment} disabled={demoCompleteMut.isPending}>
               {demoCompleteMut.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

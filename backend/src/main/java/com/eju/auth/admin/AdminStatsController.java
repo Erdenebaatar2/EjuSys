@@ -64,11 +64,15 @@ public class AdminStatsController {
                         .thenComparing(Application::getCreatedAt))
                 .toList();
 
-        long total = filtered.size();
-        long paid = filtered.stream().filter(a -> a.getPaymentStatus() == Application.PaymentStatus.PAID).count();
+        List<Application> reportApplications = filtered.stream()
+                .filter(a -> !isBootstrapTestApplication(a, profileMap))
+                .toList();
+
+        long total = reportApplications.size();
+        long paid = reportApplications.stream().filter(a -> a.getPaymentStatus() == Application.PaymentStatus.PAID).count();
         long unpaid = total - paid;
 
-        Map<String, Long> monthly = filtered.stream()
+        Map<String, Long> monthly = reportApplications.stream()
                 .collect(Collectors.groupingBy(
                         a -> a.getCreatedAt().atZone(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyy-MM")),
                         LinkedHashMap::new,
@@ -76,12 +80,12 @@ public class AdminStatsController {
                 ));
 
         Map<String, Long> subjectDistribution = new LinkedHashMap<>();
-        subjectDistribution.put("japanese", filtered.stream().filter(Application::isSubjectJapanese).count());
-        subjectDistribution.put("science", filtered.stream().filter(Application::isSubjectScience).count());
-        subjectDistribution.put("general", filtered.stream().filter(Application::isSubjectJapanAndWorld).count());
-        subjectDistribution.put("math", filtered.stream().filter(Application::isSubjectMathematics).count());
+        subjectDistribution.put("japanese", reportApplications.stream().filter(Application::isSubjectJapanese).count());
+        subjectDistribution.put("science", reportApplications.stream().filter(Application::isSubjectScience).count());
+        subjectDistribution.put("general", reportApplications.stream().filter(Application::isSubjectJapanAndWorld).count());
+        subjectDistribution.put("math", reportApplications.stream().filter(Application::isSubjectMathematics).count());
 
-        Map<String, Long> locationDistribution = filtered.stream()
+        Map<String, Long> locationDistribution = reportApplications.stream()
                 .map(a -> examMap.get(a.getExamId()))
                 .filter(e -> e != null && e.getLocation() != null)
                 .collect(Collectors.groupingBy(Exam::getLocation, LinkedHashMap::new, Collectors.counting()));
@@ -89,7 +93,7 @@ public class AdminStatsController {
         List<Map<String, Object>> examSeatStats = activeExams.stream()
                 .filter(e -> (year == null || year.equals(e.getYear())) && (session == null || session.isBlank() || e.getSession().name().equals(session.toUpperCase())))
                 .map(e -> {
-                    long registered = filtered.stream().filter(a -> e.getId().equals(a.getExamId())).count();
+                    long registered = reportApplications.stream().filter(a -> e.getId().equals(a.getExamId())).count();
                     double percent = e.getTotalSeats() == null || e.getTotalSeats() == 0
                             ? 0
                             : (registered * 100.0) / e.getTotalSeats();
@@ -99,6 +103,8 @@ public class AdminStatsController {
                     row.put("year", e.getYear());
                     row.put("session", e.getSession().name().toLowerCase());
                     row.put("location", e.getLocation());
+                    row.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());
+                    row.put("hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName());
                     row.put("totalSeats", e.getTotalSeats());
                     row.put("registered", registered);
                     row.put("filledPercent", percent);
@@ -106,7 +112,7 @@ public class AdminStatsController {
                 }).toList();
 
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Application app : filtered) {
+        for (Application app : reportApplications) {
             Exam exam = examMap.get(app.getExamId());
             Profile profile = profileMap.get(app.getUserId());
             Map<String, Object> row = new LinkedHashMap<>();
@@ -132,6 +138,8 @@ public class AdminStatsController {
             row.put("examName", exam == null ? null : exam.getName());
             row.put("examDate", exam == null ? null : exam.getExamDate());
             row.put("examLocation", exam == null ? null : exam.getLocation());
+            row.put("examHost", exam == null || exam.getExamHost() == null ? null : exam.getExamHost().name());
+            row.put("hostCity", exam == null || exam.getExamHost() == null ? null : exam.getExamHost().getDisplayName());
             row.put("examSession", exam == null ? null : exam.getSession().name().toLowerCase());
             row.put("examYear", exam == null ? null : exam.getYear());
             rows.add(row);
@@ -148,7 +156,7 @@ public class AdminStatsController {
         response.put("locationDistribution", locationDistribution.entrySet().stream().map(e -> Map.of("location", e.getKey(), "count", e.getValue())).toList());
         response.put("examSeatStats", examSeatStats);
         response.put("rows", rows);
-        response.put("students", profileMap.values().stream().map(p -> studentRow(p, filtered)).toList());
+        response.put("students", profileMap.values().stream().map(p -> studentRow(p, reportApplications)).toList());
         response.put("exams", activeExams.stream()
                 .sorted(Comparator.comparing(Exam::getExamDate))
                 .map(e -> Map.of(
@@ -157,7 +165,9 @@ public class AdminStatsController {
                         "year", e.getYear(),
                         "session", e.getSession().name().toLowerCase(),
                         "date", e.getExamDate(),
-                        "location", e.getLocation()
+                        "location", e.getLocation(),
+                        "examHost", e.getExamHost() == null ? null : e.getExamHost().name(),
+                        "hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName()
                 ))
                 .toList());
         return response;

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPut, uploadPhoto } from "@/lib/api";
+import { useEffect, useState, type ComponentType } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet } from "@/lib/api";
 import { useLang } from "@/contexts/LangContext";
 import {
   StudentMetricCard,
@@ -9,30 +9,17 @@ import {
   StudentPanel,
 } from "@/components/student/StudentPage";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Camera,
   CheckCircle2,
   CreditCard,
-  Edit3,
   ImageUp,
   Loader2,
   Lock,
   Mail,
   MapPin,
   Phone,
-  Save,
-  Upload,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -54,84 +41,20 @@ interface ProfileData {
   profilePhotoPath?: string | null;
 }
 
-interface EditForm {
-  firstName: string;
-  lastName: string;
-  email: string;
-  passportNumber: string;
-  phone: string;
-  address: string;
-  profilePhotoPath: string;
-}
-
 function ProfilePage() {
   const { lang } = useLang();
-  const qc = useQueryClient();
-  const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState<EditForm>(() => emptyEditForm());
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState("");
-  const [savedPhotoPreviewUrl, setSavedPhotoPreviewUrl] = useState("");
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["student", "profile"],
     queryFn: () => apiGet<ProfileData>("/api/student/profile"),
   });
 
-  const saveMut = useMutation({
-    mutationFn: (payload: EditForm) =>
-      apiPut<ProfileData>("/api/student/profile", {
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        email: payload.email,
-        passportNumber: payload.passportNumber,
-        phone: payload.phone || null,
-        address: payload.address || null,
-        profilePhotoPath: payload.profilePhotoPath || null,
-      }),
-    onSuccess: (updated) => {
-      qc.setQueryData(["student", "profile"], updated);
-      void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
-      if (photoPreviewUrl) setSavedPhotoPreviewUrl(photoPreviewUrl);
-      setEditOpen(false);
-      toast.success(lang === "mn" ? "Профайл хадгалагдлаа" : "Profile saved");
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Error"),
-  });
-
-  const uploadMut = useMutation({
-    mutationFn: uploadPhoto,
-    onSuccess: (path) => {
-      setEditForm((current) => ({ ...current, profilePhotoPath: path }));
-      toast.success(lang === "mn" ? "Зураг амжилттай орлоо" : "Photo uploaded");
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Upload failed"),
-  });
-
-  useEffect(() => {
-    return () => {
-      if (photoPreviewUrl.startsWith("blob:")) URL.revokeObjectURL(photoPreviewUrl);
-      if (savedPhotoPreviewUrl.startsWith("blob:")) URL.revokeObjectURL(savedPhotoPreviewUrl);
-    };
-  }, [photoPreviewUrl, savedPhotoPreviewUrl]);
-
-  function openEditor() {
-    if (!profile) return;
-    setEditForm({
-      firstName: profile.firstName ?? "",
-      lastName: profile.lastName ?? "",
-      email: profile.email ?? "",
-      passportNumber: profile.passportNumber ?? "",
-      phone: profile.phone ?? "",
-      address: profile.address ?? "",
-      profilePhotoPath: profile.profilePhotoPath ?? "",
-    });
-    setPhotoPreviewUrl("");
-    setEditOpen(true);
-  }
-
-  function onSave(event: FormEvent) {
-    event.preventDefault();
-    saveMut.mutate(editForm);
+  function showLockedMessage() {
+    toast.info(
+      lang === "mn"
+        ? "Хувийн мэдээллийг бүртгэл үүссэний дараа өөрчлөх боломжгүй. Мэдээлэл алдаатай бол админтай холбогдоно уу."
+        : "Personal information cannot be changed after registration. Please contact an admin if anything is incorrect.",
+    );
   }
 
   if (isLoading || !profile) {
@@ -144,10 +67,9 @@ function ProfilePage() {
 
   const fullName = `${profile.lastName ?? ""} ${profile.firstName ?? ""}`.trim();
   const initials = initialsFor(profile);
-  const avatarSrc = savedPhotoPreviewUrl || mediaUrl(profile.profilePhotoPath);
-  const editAvatarSrc = photoPreviewUrl || mediaUrl(editForm.profilePhotoPath);
+  const avatarSrc = mediaUrl(profile.profilePhotoPath);
   const contactComplete = Boolean(profile.phone && profile.address);
-  const photoComplete = Boolean(profile.profilePhotoPath || savedPhotoPreviewUrl);
+  const documentComplete = Boolean(profile.passportNumber);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -157,13 +79,13 @@ function ProfilePage() {
         title={lang === "mn" ? "Профайл" : "Profile"}
         description={
           lang === "mn"
-            ? "Нэр, холбоо барих мэдээлэл, цээж зураг болон паспортын мэдээллээ хянах хэсэг."
-            : "Review your name, contact details, profile photo, and passport information."
+            ? "Account үүсгэх үед оруулсан үндсэн мэдээлэл. Эдгээр талбарууд read-only бөгөөд шалгалтын бүртгэлд автоматаар ашиглагдана."
+            : "Core information captured during account registration. These fields are read-only and reused automatically for exam applications."
         }
         actions={
-          <Button type="button" onClick={openEditor}>
-            <Edit3 className="h-4 w-4" />
-            {lang === "mn" ? "Профайл засах" : "Edit profile"}
+          <Button type="button" variant="outline" onClick={showLockedMessage}>
+            <Lock className="h-4 w-4" />
+            {lang === "mn" ? "Мэдээлэл locked" : "Information locked"}
           </Button>
         }
       />
@@ -192,25 +114,29 @@ function ProfilePage() {
           tone={contactComplete ? "teal" : "amber"}
         />
         <StudentMetricCard
+          icon={CreditCard}
+          label={lang === "mn" ? "Бичиг баримт" : "Document"}
+          value={documentComplete ? profile.passportNumber : "-"}
+          helper={lang === "mn" ? "Шалгалтын form-д ашиглагдана" : "Used on applicant forms"}
+          tone={documentComplete ? "blue" : "amber"}
+        />
+        <StudentMetricCard
           icon={ImageUp}
           label={lang === "mn" ? "Цээж зураг" : "Photo"}
           value={
-            photoComplete
+            profile.profilePhotoPath
               ? lang === "mn"
                 ? "Оруулсан"
                 : "Added"
               : lang === "mn"
-                ? "Дутуу"
-                : "Missing"
+                ? "Шалгалтад оруулна"
+                : "Upload per exam"
           }
-          helper={lang === "mn" ? "Бүртгэлд ашиглагдана" : "Used for applications"}
-          tone={photoComplete ? "blue" : "amber"}
-        />
-        <StudentMetricCard
-          icon={CreditCard}
-          label={lang === "mn" ? "Паспорт" : "Passport"}
-          value={profile.passportNumber || "-"}
-          helper={lang === "mn" ? "Профайл дээр засах боломжтой" : "Editable in your profile"}
+          helper={
+            lang === "mn"
+              ? "Шалгалтад бүртгүүлэх үед зураг заавал орно"
+              : "A photo is required during exam registration"
+          }
           tone="violet"
         />
       </div>
@@ -218,7 +144,7 @@ function ProfilePage() {
       <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         <StudentPanel contentClassName="p-0">
           <div className="flex flex-col items-center p-6 text-center">
-            <AvatarBox src={avatarSrc} initials={initials} size="lg" />
+            <AvatarBox src={avatarSrc} initials={initials} />
             <h2 className="mt-4 max-w-full truncate text-xl font-semibold text-foreground">
               {fullName || "-"}
             </h2>
@@ -239,7 +165,7 @@ function ProfilePage() {
               />
               <ReadOnlyField
                 icon={CreditCard}
-                label={lang === "mn" ? "Паспорт дугаар" : "Passport number"}
+                label={lang === "mn" ? "Бичиг баримтын дугаар" : "Document number"}
                 value={profile.passportNumber}
                 mono
               />
@@ -252,13 +178,13 @@ function ProfilePage() {
             title={lang === "mn" ? "Хувийн мэдээлэл" : "Personal information"}
             description={
               lang === "mn"
-                ? "Админ тал дээр харагдах үндсэн мэдээлэл."
-                : "Core information visible to administrators."
+                ? "Доорх мэдээлэл бүртгэл үүссэний дараа өөрчлөгдөхгүй. Алдаа байвал админтай холбогдоно уу."
+                : "These fields cannot be changed after account creation. Contact an admin if anything is incorrect."
             }
             actions={
-              <Button type="button" variant="outline" size="sm" onClick={openEditor}>
-                <Edit3 className="h-4 w-4" />
-                {lang === "mn" ? "Засах" : "Edit"}
+              <Button type="button" variant="outline" size="sm" onClick={showLockedMessage}>
+                <Lock className="h-4 w-4" />
+                {lang === "mn" ? "Read-only" : "Read-only"}
               </Button>
             }
           >
@@ -272,7 +198,11 @@ function ProfilePage() {
                 value={profile.firstName}
               />
               <ReadOnlyField
-                className="sm:col-span-2"
+                icon={Mail}
+                label={lang === "mn" ? "Имэйл" : "Email"}
+                value={profile.email}
+              />
+              <ReadOnlyField
                 icon={Phone}
                 label={lang === "mn" ? "Утас" : "Phone"}
                 value={profile.phone}
@@ -280,166 +210,39 @@ function ProfilePage() {
               <ReadOnlyField
                 className="sm:col-span-2"
                 icon={MapPin}
-                label={lang === "mn" ? "Хаяг" : "Address"}
+                label={lang === "mn" ? "Оршин суугаа хаяг" : "Residential address"}
                 value={profile.address}
               />
-            </div>
-          </StudentPanel>
-
-          <StudentPanel
-            title={lang === "mn" ? "Нэвтрэх ба паспортын мэдээлэл" : "Login and passport information"}
-            description={
-              lang === "mn"
-                ? "Эдгээр нь профайл дээр засагдана. Шалгалтад илгээсэн бүртгэлийн мэдээлэл тусдаа хадгалагдана."
-                : "These can be updated here. Submitted exam application details stay unchanged."
-            }
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
               <ReadOnlyField
-                icon={Mail}
-                label={lang === "mn" ? "Имэйл" : "Email"}
-                value={profile.email}
-              />
-              <ReadOnlyField
-                icon={Lock}
-                label={lang === "mn" ? "Паспорт дугаар" : "Passport number"}
+                className="sm:col-span-2"
+                icon={CreditCard}
+                label={
+                  lang === "mn" ? "Паспорт / бичиг баримтын дугаар" : "Passport / document number"
+                }
                 value={profile.passportNumber}
                 mono
               />
             </div>
           </StudentPanel>
+
+          <StudentPanel
+            title={lang === "mn" ? "Санамж" : "Notice"}
+            description={
+              lang === "mn"
+                ? "Шалгалтад бүртгүүлэх үед энэ мэдээллийг дахин бөглүүлэхгүй. Цээж зураг болон хичээл сонголтыг тухайн бүртгэл дээр тусад нь хадгална."
+                : "During exam registration, this information is not collected again. Photo and subject choices are saved per application."
+            }
+          >
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm leading-6 text-muted-foreground">
+              {lang === "mn"
+                ? "Хувийн мэдээлэл албан ёсны бичиг баримттай зөрүүтэй бол шалгалтын бүртгэл дээр буруу мэдээлэл гарах тул админтай холбогдож засуулах шаардлагатай."
+                : "If personal information does not match your official document, contact an admin so the applicant form can be corrected before use."}
+            </div>
+          </StudentPanel>
         </div>
       </div>
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
-          <form onSubmit={onSave} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{lang === "mn" ? "Профайл засах" : "Edit profile"}</DialogTitle>
-              <DialogDescription>
-                {lang === "mn"
-                  ? "Зураг, нэр, утас болон хаягаа шинэчилнэ."
-                  : "Update your photo, name, phone, and address."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex items-center gap-4">
-              <AvatarBox src={editAvatarSrc} initials={initialsFor(editForm)} size="md" editable />
-              <div>
-                <Label
-                  htmlFor="profile-photo"
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted/50"
-                >
-                  {uploadMut.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  {lang === "mn" ? "Зураг оруулах" : "Upload photo"}
-                </Label>
-                <input
-                  id="profile-photo"
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="hidden"
-                  disabled={uploadMut.isPending}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                      const preview = URL.createObjectURL(file);
-                      setPhotoPreviewUrl((previous) => {
-                        if (previous.startsWith("blob:")) URL.revokeObjectURL(previous);
-                        return preview;
-                      });
-                      uploadMut.mutate(file);
-                    }
-                    event.currentTarget.value = "";
-                  }}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">JPG/PNG, 2MB</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <EditField label={lang === "mn" ? "Овог" : "Last name"}>
-                <Input
-                  value={editForm.lastName}
-                  onChange={(event) => setEditForm({ ...editForm, lastName: event.target.value })}
-                  required
-                />
-              </EditField>
-              <EditField label={lang === "mn" ? "Нэр" : "First name"}>
-                <Input
-                  value={editForm.firstName}
-                  onChange={(event) => setEditForm({ ...editForm, firstName: event.target.value })}
-                  required
-                />
-              </EditField>
-            </div>
-
-            <EditField label={lang === "mn" ? "Имэйл" : "Email"} icon={Mail}>
-              <Input
-                type="email"
-                value={editForm.email}
-                onChange={(event) => setEditForm({ ...editForm, email: event.target.value })}
-                required
-              />
-            </EditField>
-
-            <EditField label={lang === "mn" ? "Паспорт дугаар" : "Passport number"} icon={CreditCard}>
-              <Input
-                value={editForm.passportNumber}
-                onChange={(event) =>
-                  setEditForm({ ...editForm, passportNumber: event.target.value })
-                }
-              />
-            </EditField>
-
-            <EditField label={lang === "mn" ? "Утас" : "Phone"} icon={Phone}>
-              <Input
-                value={editForm.phone}
-                onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })}
-                placeholder="+976 ..."
-              />
-            </EditField>
-
-            <EditField label={lang === "mn" ? "Хаяг" : "Address"} icon={MapPin}>
-              <Input
-                value={editForm.address}
-                onChange={(event) => setEditForm({ ...editForm, address: event.target.value })}
-              />
-            </EditField>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                {lang === "mn" ? "Болих" : "Cancel"}
-              </Button>
-              <Button type="submit" disabled={saveMut.isPending || uploadMut.isPending}>
-                {saveMut.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {lang === "mn" ? "Хадгалах" : "Save"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-}
-
-function emptyEditForm(): EditForm {
-  return {
-    firstName: "",
-    lastName: "",
-    email: "",
-    passportNumber: "",
-    phone: "",
-    address: "",
-    profilePhotoPath: "",
-  };
 }
 
 function mediaUrl(path?: string | null): string {
@@ -464,35 +267,19 @@ function mediaBaseUrl(): string {
   return "";
 }
 
-function initialsFor(profile: Pick<ProfileData, "firstName" | "lastName"> | EditForm): string {
+function initialsFor(profile: Pick<ProfileData, "firstName" | "lastName">): string {
   const last = profile.lastName?.trim()[0] ?? "";
   const first = profile.firstName?.trim()[0] ?? "";
   return `${last}${first}`.toUpperCase() || "?";
 }
 
-function AvatarBox({
-  src,
-  initials,
-  size,
-  editable = false,
-}: {
-  src: string;
-  initials: string;
-  size: "md" | "lg";
-  editable?: boolean;
-}) {
+function AvatarBox({ src, initials }: { src: string; initials: string }) {
   const [failed, setFailed] = useState(false);
-  const sizeClass = size === "lg" ? "h-24 w-24 text-3xl" : "h-16 w-16 text-xl";
 
   useEffect(() => setFailed(false), [src]);
 
   return (
-    <div
-      className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 border-background bg-primary font-bold text-primary-foreground shadow-elegant",
-        sizeClass,
-      )}
-    >
+    <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border-4 border-background bg-primary text-3xl font-bold text-primary-foreground shadow-elegant">
       {src && !failed ? (
         <img
           src={src}
@@ -503,11 +290,9 @@ function AvatarBox({
       ) : (
         <span>{initials}</span>
       )}
-      {editable ? (
-        <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-tl-lg bg-background/95 text-primary">
-          <Camera className="h-3.5 w-3.5" />
-        </div>
-      ) : null}
+      <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-tl-lg bg-background/95 text-primary">
+        <Camera className="h-3.5 w-3.5" />
+      </div>
     </div>
   );
 }
@@ -539,26 +324,6 @@ function ReadOnlyField({
       >
         {value || "-"}
       </div>
-    </div>
-  );
-}
-
-function EditField({
-  label,
-  children,
-  icon: Icon,
-}: {
-  label: string;
-  children: ReactNode;
-  icon?: ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-        {label}
-      </Label>
-      {children}
     </div>
   );
 }

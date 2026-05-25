@@ -31,7 +31,17 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, CalendarDays, Clock3, MapPin, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import {
+  Banknote,
+  BookOpen,
+  CalendarDays,
+  Clock3,
+  MapPin,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isRegistrationOpen } from "@/lib/eju-format";
 
@@ -41,14 +51,18 @@ export const Route = createFileRoute("/admin/exams")({
 });
 
 type Session = "FIRST" | "SECOND";
+type ExamHost = "ULAANBAATAR" | "DARKHAN" | "ERDENET";
 
 interface ExamRecord {
   id: string;
   name: string;
   year: number;
   session: Session;
+  examHost?: ExamHost | null;
+  hostCity?: string | null;
   examDate: string;
   location: string;
+  examFee: number;
   registrationStart: string;
   registrationEnd: string;
   description?: string | null;
@@ -60,15 +74,13 @@ interface ExamRecord {
 }
 
 interface ExamForm {
-  name: string;
   year: string;
   session: Session;
+  examHost: ExamHost;
   examDate: string;
-  location: string;
+  examFee: string;
   registrationStart: string;
   registrationEnd: string;
-  description: string;
-  examInfoLocation: string;
   examInfoStartTime: string;
   examInfoMethod: string;
   examInfoDurationMinutes: string;
@@ -287,6 +299,7 @@ function AdminExamPage() {
                             <span>{exam.year}</span>
                             <span>{sessionLabel(exam.session, lang)}</span>
                             <span>{exam.examDate}</span>
+                            <span>{formatCurrency(exam.examFee)}</span>
                           </div>
                         </div>
                         <Badge
@@ -368,13 +381,6 @@ function AdminExamPage() {
               }
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label={lang === "mn" ? "Шалгалтын нэр" : "Exam name"}>
-                  <Input
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                </Field>
                 <Field label={lang === "mn" ? "Он" : "Year"}>
                   <Input
                     type="number"
@@ -398,6 +404,21 @@ function AdminExamPage() {
                     </SelectContent>
                   </Select>
                 </Field>
+                <Field label={lang === "mn" ? "Шалгалт зохион байгуулагдах хот" : "Exam host city"}>
+                  <Select
+                    value={form.examHost}
+                    onValueChange={(value) => setForm({ ...form, examHost: value as ExamHost })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ULAANBAATAR">Улаанбаатар</SelectItem>
+                      <SelectItem value="DARKHAN">Дархан</SelectItem>
+                      <SelectItem value="ERDENET">Эрдэнэт</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
                 <Field label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}>
                   <div className="relative">
                     <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -410,12 +431,18 @@ function AdminExamPage() {
                     />
                   </div>
                 </Field>
-                <Field label={lang === "mn" ? "Байршил" : "Location"}>
-                  <Input
-                    required
-                    value={form.location}
-                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  />
+                <Field label={lang === "mn" ? "Шалгалтын үнэ" : "Exam fee"}>
+                  <div className="relative">
+                    <Banknote className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      type="number"
+                      required
+                      min="1"
+                      value={form.examFee}
+                      onChange={(e) => setForm({ ...form, examFee: e.target.value })}
+                    />
+                  </div>
                 </Field>
                 <Field label={lang === "mn" ? "Бүртгэл эхлэх" : "Registration start"}>
                   <Input
@@ -433,15 +460,6 @@ function AdminExamPage() {
                     onChange={(e) => setForm({ ...form, registrationEnd: e.target.value })}
                   />
                 </Field>
-                <div className="md:col-span-2">
-                  <Field label={lang === "mn" ? "Тайлбар" : "Description"}>
-                    <Textarea
-                      rows={3}
-                      value={form.description}
-                      onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    />
-                  </Field>
-                </div>
                 <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3">
                   <div className="flex items-center gap-2">
                     <Switch
@@ -458,8 +476,8 @@ function AdminExamPage() {
               title={lang === "mn" ? "Шалгалтын нэмэлт мэдээлэл" : "Additional exam information"}
               description={
                 lang === "mn"
-                  ? "Оюутанд харагдах байр, цаг, үргэлжлэх хугацаа, заавар."
-                  : "Venue, start time, duration, and method visible to students."
+                  ? "Оюутанд харагдах эхлэх цаг, үргэлжлэх хугацаа, заавар."
+                  : "Start time, duration, and method visible to students."
               }
               actions={
                 <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
@@ -473,12 +491,6 @@ function AdminExamPage() {
               }
             >
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label={lang === "mn" ? "Шалгалт авах газар" : "Exam venue"}>
-                  <Input
-                    value={form.examInfoLocation}
-                    onChange={(e) => setForm({ ...form, examInfoLocation: e.target.value })}
-                  />
-                </Field>
                 <Field label={lang === "mn" ? "Эхлэх цаг" : "Start time"}>
                   <Input
                     type="time"
@@ -540,15 +552,13 @@ function AdminExamPage() {
 
 function emptyForm(): ExamForm {
   return {
-    name: "",
     year: String(new Date().getFullYear()),
     session: "FIRST",
+    examHost: "ULAANBAATAR",
     examDate: "",
-    location: "",
+    examFee: "70000",
     registrationStart: "",
     registrationEnd: "",
-    description: "",
-    examInfoLocation: "",
     examInfoStartTime: "",
     examInfoMethod: "",
     examInfoDurationMinutes: "",
@@ -558,15 +568,13 @@ function emptyForm(): ExamForm {
 
 function formFromExam(exam: ExamRecord): ExamForm {
   return {
-    name: exam.name,
     year: String(exam.year),
     session: exam.session,
+    examHost: exam.examHost ?? inferExamHost(exam.location),
     examDate: exam.examDate,
-    location: exam.location,
+    examFee: String(exam.examFee ?? 70000),
     registrationStart: exam.registrationStart,
     registrationEnd: exam.registrationEnd,
-    description: exam.description ?? "",
-    examInfoLocation: exam.examInfoLocation ?? "",
     examInfoStartTime: toTimeInputValue(exam.examInfoStartTime),
     examInfoMethod: exam.examInfoMethod ?? "",
     examInfoDurationMinutes:
@@ -577,16 +585,15 @@ function formFromExam(exam: ExamRecord): ExamForm {
 
 function formToPayload(form: ExamForm) {
   return {
-    name: form.name,
     year: Number(form.year),
     session: form.session,
+    examHost: form.examHost,
+    hostCity: hostCityLabel(form.examHost),
     examDate: form.examDate,
-    location: form.location,
+    examFee: Number(form.examFee),
     totalSeats: 0,
     registrationStart: form.registrationStart,
     registrationEnd: form.registrationEnd,
-    description: blankToNull(form.description),
-    examInfoLocation: blankToNull(form.examInfoLocation),
     examInfoStartTime: form.examInfoStartTime || null,
     examInfoMethod: blankToNull(form.examInfoMethod),
     examInfoDurationMinutes: form.examInfoDurationMinutes
@@ -599,15 +606,9 @@ function formToPayload(form: ExamForm) {
 function validateExamForm(form: ExamForm, lang: "mn" | "en"): string | null {
   const requiredMessage =
     lang === "mn"
-      ? "Шалгалтын нэр, огноо, байршил, бүртгэлийн эхлэх/дуусах огноог бүрэн бөглөнө үү."
-      : "Please fill in the exam name, date, location, and registration dates.";
-  if (
-    !form.name.trim() ||
-    !form.examDate ||
-    !form.location.trim() ||
-    !form.registrationStart ||
-    !form.registrationEnd
-  ) {
+      ? "Шалгалтын он, session, зохион байгуулагдах хот, огноо, бүртгэлийн эхлэх/дуусах огноог бүрэн бөглөнө үү."
+      : "Please fill in year, session, host city, exam date, and registration dates.";
+  if (!form.examDate || !form.examHost || !form.registrationStart || !form.registrationEnd) {
     return requiredMessage;
   }
 
@@ -620,6 +621,11 @@ function validateExamForm(form: ExamForm, lang: "mn" | "en"): string | null {
     return lang === "mn"
       ? "Бүртгэл дуусах огноо эхлэх огнооноос өмнө байж болохгүй."
       : "Registration end date cannot be before the start date.";
+  }
+
+  const examFee = Number(form.examFee);
+  if (!Number.isInteger(examFee) || examFee <= 0) {
+    return lang === "mn" ? "Шалгалтын үнийн дүнг зөв оруулна уу." : "Enter a valid exam fee.";
   }
 
   if (form.examInfoDurationMinutes) {
@@ -639,8 +645,28 @@ function blankToNull(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function hostCityLabel(host: ExamHost): string {
+  const labels: Record<ExamHost, string> = {
+    ULAANBAATAR: "Улаанбаатар",
+    DARKHAN: "Дархан",
+    ERDENET: "Эрдэнэт",
+  };
+  return labels[host];
+}
+
+function inferExamHost(location?: string | null): ExamHost {
+  const normalized = (location ?? "").toLowerCase();
+  if (normalized.includes("дархан")) return "DARKHAN";
+  if (normalized.includes("эрдэнэт")) return "ERDENET";
+  return "ULAANBAATAR";
+}
+
 function toTimeInputValue(value?: string | null): string {
   return value ? value.slice(0, 5) : "";
+}
+
+function formatCurrency(value?: number | null): string {
+  return `${(value ?? 0).toLocaleString()} ₮`;
 }
 
 function sessionLabel(session: Session, lang: "mn" | "en"): string {

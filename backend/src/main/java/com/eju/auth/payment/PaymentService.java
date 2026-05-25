@@ -2,6 +2,7 @@ package com.eju.auth.payment;
 
 import com.eju.auth.application.Application;
 import com.eju.auth.application.ApplicationRepository;
+import com.eju.auth.exam.ExamRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,15 +18,18 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepo;
     private final ApplicationRepository appRepo;
+    private final ExamRepository examRepo;
     private final QPayClient qpay;
     private final QPayProperties props;
 
     public PaymentService(PaymentRepository paymentRepo,
                           ApplicationRepository appRepo,
+                          ExamRepository examRepo,
                           QPayClient qpay,
                           QPayProperties props) {
         this.paymentRepo = paymentRepo;
         this.appRepo = appRepo;
+        this.examRepo = examRepo;
         this.qpay = qpay;
         this.props = props;
     }
@@ -40,16 +44,17 @@ public class PaymentService {
         String senderNo = app.getApplicationNumber() == null
                 ? "EJU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()
                 : app.getApplicationNumber();
+        int amount = examFeeFor(app);
 
         if (isDemoMode()) {
             Payment p = new Payment();
             p.setApplicationId(app.getId());
             p.setSenderInvoiceNo(senderNo);
             p.setQpayInvoiceId("DEMO-" + app.getId());
-            p.setQrText("QPAY2:" + senderNo + ":" + props.getExamFee());
+            p.setQrText("QPAY2:" + senderNo + ":" + amount);
             p.setQrImage(demoQrImage(senderNo));
             p.setDeeplinksJson("[]");
-            p.setAmount(props.getExamFee());
+            p.setAmount(amount);
             p.setStatus(Payment.Status.NEW);
             p = paymentRepo.save(p);
             return toResponse(p);
@@ -64,7 +69,7 @@ public class PaymentService {
                 senderNo,
                 app.getUserId().toString(),
                 "EJU Exam fee — " + senderNo,
-                props.getExamFee(),
+                amount,
                 callback == null ? "" : callback);
 
         if (resp == null || !resp.hasNonNull("invoice_id")) {
@@ -78,10 +83,18 @@ public class PaymentService {
         p.setQrText(resp.path("qr_text").asText(null));
         p.setQrImage(resp.path("qr_image").asText(null));
         p.setDeeplinksJson(resp.has("urls") ? resp.get("urls").toString() : "[]");
-        p.setAmount(props.getExamFee());
+        p.setAmount(amount);
         p.setStatus(Payment.Status.NEW);
         p = paymentRepo.save(p);
         return toResponse(p);
+    }
+
+    private int examFeeFor(Application app) {
+        return examRepo.findById(app.getExamId())
+                .map(exam -> exam.getExamFee() == null || exam.getExamFee() <= 0
+                        ? props.getExamFee()
+                        : exam.getExamFee())
+                .orElse(props.getExamFee());
     }
 
     public Map<String, Object> refreshAndGet(Application app) {
@@ -152,7 +165,7 @@ public class PaymentService {
         paymentRepo.save(p);
         app.setPaymentStatus(Application.PaymentStatus.PAID);
         if (app.getStatus() == Application.Status.PENDING_PAYMENT || app.getStatus() == Application.Status.PENDING) {
-            app.setStatus(Application.Status.APPROVED);
+            app.setStatus(Application.Status.CONFIRMED);
         }
         appRepo.save(app);
     }
@@ -202,7 +215,7 @@ public class PaymentService {
         m.put("invoiceId", p.getQpayInvoiceId());
         m.put("senderInvoiceNo", p.getSenderInvoiceNo());
         m.put("amount", p.getAmount());
-        m.put("status", p.getStatus().name());
+        m.put("status", p.getStatus() == Payment.Status.NEW ? "PENDING" : p.getStatus().name());
         m.put("qrText", p.getQrText());
         m.put("qrImage", p.getQrImage());
         m.put("deeplinks", p.getDeeplinksJson());

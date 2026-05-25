@@ -59,9 +59,7 @@ type StatsResponse = {
     year: number;
     session: string;
     location: string;
-    totalSeats: number | null;
     registered: number;
-    filledPercent: number;
   }>;
   rows: Array<Record<string, string | number | boolean | null>>;
   students: Array<Record<string, string | number | boolean | null>>;
@@ -329,27 +327,6 @@ function AdminStatsPage() {
         </AdminPanel>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <AdminMetricCard
-              icon={BarChart3}
-              label={lang === "mn" ? "Нийт өргөдөл" : "Total"}
-              value={data.kpi.totalApplications}
-              tone="blue"
-            />
-            <AdminMetricCard
-              icon={CheckCircle2}
-              label={lang === "mn" ? "Төлсөн" : "Paid"}
-              value={data.kpi.paid}
-              tone="teal"
-            />
-            <AdminMetricCard
-              icon={XCircle}
-              label={lang === "mn" ? "Төлөөгүй" : "Unpaid"}
-              value={data.kpi.unpaid}
-              tone="violet"
-            />
-          </div>
-
           <div className="grid gap-4 lg:grid-cols-2">
             <AdminPanel
               title={lang === "mn" ? "Сараар өргөдлийн тоо" : "Monthly applications"}
@@ -446,32 +423,20 @@ function AdminStatsPage() {
               ) : (
                 <div className="space-y-3">
                   {data.examSeatStats.map((row) => {
-                    const hasSeatLimit = typeof row.totalSeats === "number" && row.totalSeats > 0;
-
                     return (
                       <div key={row.examId} className="rounded-lg border bg-background p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate font-medium">{row.name}</div>
                             <div className="mt-1 text-sm text-muted-foreground">
-                              {hasSeatLimit
-                                ? `${row.registered}/${row.totalSeats}`
-                                : `${row.registered} ${lang === "mn" ? "бүртгэл" : "applications"}`}{" "}
-                              · {row.location}
+                              {row.registered} {lang === "mn" ? "бүртгэл" : "applications"} ·{" "}
+                              {row.location}
                             </div>
                           </div>
                           <div className="shrink-0 text-sm font-semibold text-primary">
-                            {hasSeatLimit ? `${row.filledPercent.toFixed(1)}%` : row.registered}
+                            {row.registered}
                           </div>
                         </div>
-                        {hasSeatLimit && (
-                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-primary"
-                              style={{ width: `${Math.min(row.filledPercent, 100)}%` }}
-                            />
-                          </div>
-                        )}
                       </div>
                     );
                   })}

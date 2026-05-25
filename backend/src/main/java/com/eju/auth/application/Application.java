@@ -7,10 +7,16 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "applications")
+@Table(
+        name = "applications",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_applications_user_exam",
+                columnNames = {"user_id", "exam_id"}
+        )
+)
 public class Application {
 
-    public enum Status { PENDING_PAYMENT, PENDING, APPROVED, REJECTED }
+    public enum Status { PENDING_PAYMENT, PENDING, CONFIRMED, APPROVED, REJECTED }
     public enum PaymentStatus { UNPAID, PAID }
     public enum Sex { MALE, FEMALE }
     public enum ScienceOption { PHYSICS, CHEMISTRY, BIOLOGY }

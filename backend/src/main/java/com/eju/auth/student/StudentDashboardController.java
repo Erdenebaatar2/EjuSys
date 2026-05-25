@@ -37,12 +37,17 @@ public class StudentDashboardController {
         LocalDate today = LocalDate.now();
         var activeExamOpt = examRepo.findFirstRegistrationOpen(today);
 
-        List<Application> apps = appRepo.findActiveExamApplicationsByUserId(userId);
+        List<Application> apps = appRepo.findByUserId(userId);
         long totalApps = apps.size();
-        long pendingApps = apps.stream().filter(a -> a.getStatus() == Application.Status.PENDING).count();
-        long approvedApps = apps.stream().filter(a -> a.getStatus() == Application.Status.APPROVED).count();
+        long pendingApps = apps.stream().filter(a ->
+                a.getStatus() == Application.Status.PENDING
+                        || a.getStatus() == Application.Status.PENDING_PAYMENT).count();
+        long approvedApps = apps.stream().filter(a ->
+                a.getStatus() == Application.Status.APPROVED
+                        || a.getStatus() == Application.Status.CONFIRMED).count();
         var currentExamApp = activeExamOpt
                 .flatMap(exam -> appRepo.findByUserIdAndExamId(userId, exam.getId()))
+                .or(() -> appRepo.findFirstByUserIdOrderByCreatedAtDesc(userId))
                 .orElse(null);
 
         String firstName = profileRepo.findById(userId)
@@ -67,7 +72,9 @@ public class StudentDashboardController {
                 "examDate", exam.getExamDate(),
                 "registrationStart", exam.getRegistrationStart(),
                 "registrationEnd", exam.getRegistrationEnd(),
-                "location", exam.getLocation()
+                "location", exam.getLocation(),
+                "examHost", exam.getExamHost() == null ? null : exam.getExamHost().name(),
+                "hostCity", exam.getExamHost() == null ? exam.getLocation() : exam.getExamHost().getDisplayName()
         )));
         return response;
     }

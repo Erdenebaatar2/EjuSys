@@ -7,7 +7,7 @@ export function StatusBadge({ status }: { status: string }) {
   const label = statusLabel(status, lang);
 
   const cls =
-    status === "approved" || status === "paid"
+    status === "approved" || status === "confirmed" || status === "paid"
       ? "bg-success/15 text-success border-success/30 hover:bg-success/15"
       : status === "rejected"
         ? "bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/15"
