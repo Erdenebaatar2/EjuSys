@@ -68,6 +68,7 @@ type StatsResponse = {
     name: string;
     year: number;
     session: string;
+    examRound?: number | null;
     date: string;
     location: string;
   }>;
@@ -75,12 +76,24 @@ type StatsResponse = {
 
 const PIE_COLORS = ["#2563eb", "#0891b2", "#16a34a", "#f59e0b", "#e11d48"];
 const APPLICATION_COLUMN_WIDTHS = [
-  4, 20, 26, 8, 13, 14, 14, 18, 12, 18, 14, 12, 10, 12, 24, 26, 26,
+  4, 20, 26, 8, 13, 14, 14, 18, 12, 12, 12, 12, 18, 14, 12, 10, 12, 24, 26, 26,
 ];
-const CENTER_DATA_COLUMNS = new Set([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+const CENTER_DATA_COLUMNS = new Set([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
 
 function mark(value: unknown): string {
   return value === true ? "O" : "";
+}
+
+function hasScienceOption(row: Record<string, string | number | boolean | null>, option: string) {
+  return row.scienceOption1 === option || row.scienceOption2 === option;
+}
+
+function languageMark(value: unknown, expected: "JAPANESE" | "ENGLISH"): string {
+  return String(value ?? "").toUpperCase() === expected ? "O" : "";
+}
+
+function scholarshipMark(value: unknown): string {
+  return value === true || String(value ?? "").toLowerCase() === "true" ? "Y" : "N";
 }
 
 function formatSex(value: unknown): string {
@@ -175,6 +188,9 @@ function AdminStatsPage() {
         "",
         "",
         "",
+        "",
+        "",
+        "",
       ],
       [
         "",
@@ -185,6 +201,9 @@ function AdminStatsPage() {
         "",
         "",
         styledCell("Exam Subjects", "group"),
+        "",
+        "",
+        "",
         "",
         "",
         "",
@@ -205,6 +224,9 @@ function AdminStatsPage() {
         styledCell("Address Code", "header"),
         styledCell("Japanese Subject", "header"),
         styledCell("Science", "header"),
+        styledCell("Physics", "header"),
+        styledCell("Chemistry", "header"),
+        styledCell("Biology", "header"),
         styledCell("Japan and World", "header"),
         styledCell("Mathematics", "header"),
         styledCell("Japanese", "header"),
@@ -225,11 +247,14 @@ function AdminStatsPage() {
           formatAddressCode(r.addressCode, r.countryCode),
           mark(r.subjectJapanese),
           mark(r.subjectScience),
+          mark(hasScienceOption(r, "PHYSICS")),
+          mark(hasScienceOption(r, "CHEMISTRY")),
+          mark(hasScienceOption(r, "BIOLOGY")),
           mark(r.subjectJapanAndWorld),
           mark(r.subjectMathematics),
-          r.examLanguage === "JAPANESE" ? "O" : "",
-          r.examLanguage === "ENGLISH" ? "O" : "",
-          r.jassoScholarshipApply ? "Y" : "N",
+          languageMark(r.examLanguage, "JAPANESE"),
+          languageMark(r.examLanguage, "ENGLISH"),
+          scholarshipMark(r.jassoScholarshipApply),
           r.schoolOrOccupation,
           photoFilename(r.photoUrl),
           renamedPhotoFilename(r.applicationNumber),
@@ -240,9 +265,9 @@ function AdminStatsPage() {
       sheetName: "Applications",
       rows,
       columnWidths: APPLICATION_COLUMN_WIDTHS,
-      merges: ["B1:Q1", "H2:K2", "L2:M2"],
+      merges: ["B1:T1", "H2:N2", "O2:P2"],
       freezeRows: 3,
-      autoFilter: `B3:Q${rows.length}`,
+      autoFilter: `B3:T${rows.length}`,
     });
   };
 
@@ -298,6 +323,7 @@ function AdminStatsPage() {
                 <SelectItem value="all">{lang === "mn" ? "Бүгд" : "All"}</SelectItem>
                 <SelectItem value="FIRST">First</SelectItem>
                 <SelectItem value="SECOND">Second</SelectItem>
+                <SelectItem value="THIRD">Third</SelectItem>
               </SelectContent>
             </Select>
           </Field>

@@ -54,6 +54,8 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByUserId(UUID userId);
 
+    List<Application> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
     Optional<Application> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 
     List<Application> findByExamId(UUID examId);

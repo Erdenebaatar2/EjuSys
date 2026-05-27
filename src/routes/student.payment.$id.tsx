@@ -29,6 +29,7 @@ type PaymentResponse = {
   paymentId: string;
   applicationId: string;
   invoiceId: string | null;
+  qpayPaymentId?: string | null;
   senderInvoiceNo: string;
   amount: number;
   status: "NEW" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
@@ -36,7 +37,6 @@ type PaymentResponse = {
   qrImage: string | null;
   deeplinks: string;
   paidAt: string | null;
-  demo?: boolean;
 };
 
 type AppSummary = {
@@ -51,7 +51,7 @@ function PaymentPage() {
   const { id } = Route.useParams();
   const { lang } = useLang();
   const qc = useQueryClient();
-  const [creating, setCreating] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const appQuery = useQuery({
     queryKey: ["student", "application"],
@@ -73,27 +73,10 @@ function PaymentPage() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "QPay2 error"),
   });
 
-  const demoCompleteMut = useMutation({
-    mutationFn: () =>
-      apiPost<PaymentResponse>(`/api/student/application/${id}/payment/qpay/demo-complete`),
-    onSuccess: (paid) => {
-      qc.setQueryData(["payment", "status", id], paid);
-      void qc.invalidateQueries({ queryKey: ["student", "application"] });
-      void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Demo payment failed"),
-  });
-
-  useEffect(() => {
-    if (creating || invoiceQuery.data || createMut.data || createMut.isPending) return;
-    setCreating(true);
-    createMut.mutate(undefined, {
-      onSettled: () => setCreating(false),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const data = invoiceQuery.data ?? createMut.data;
+  const data =
+    invoiceQuery.data ??
+    createMut.data ??
+    (qc.getQueryData(["payment", "status", id]) as PaymentResponse | undefined);
   const isPaid = data?.status === "PAID" || appQuery.data?.paymentStatus === "paid";
   const amount = data?.amount != null ? `${data.amount.toLocaleString()} ₮` : "-";
 
@@ -130,14 +113,27 @@ function PaymentPage() {
   }, [data?.deeplinks]);
 
   function checkPayment() {
-    if (data?.demo) {
-      demoCompleteMut.mutate();
-      return;
-    }
-    void qc.fetchQuery({
-      queryKey: ["payment", "status", id],
-      queryFn: () => apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
-    });
+    if (!data) return;
+    setCheckingPayment(true);
+    void qc
+      .fetchQuery({
+        queryKey: ["payment", "status", id],
+        queryFn: () =>
+          apiGet<PaymentResponse>(`/api/student/application/${id}/payment/qpay/status`),
+      })
+      .then((result) => {
+        if (result.status === "PAID") {
+          toast.success(paymentText(lang, "paid"));
+          void qc.invalidateQueries({ queryKey: ["student", "application"] });
+          void qc.invalidateQueries({ queryKey: ["student", "dashboard"] });
+        } else if (result.status === "FAILED" || result.status === "EXPIRED") {
+          toast.error(paymentText(lang, "failed"));
+        } else {
+          toast.info(paymentText(lang, "pending"));
+        }
+      })
+      .catch(() => toast.error(paymentText(lang, "checkFailed")))
+      .finally(() => setCheckingPayment(false));
   }
 
   if (isPaid) {
@@ -240,8 +236,22 @@ function PaymentPage() {
                 {lang === "mn" ? "Бүртгэл" : "Application"}
               </Link>
             </Button>
-            <Button variant="outline" onClick={checkPayment} disabled={demoCompleteMut.isPending}>
-              {demoCompleteMut.isPending ? (
+            {!data && (
+              <Button onClick={() => createMut.mutate()} disabled={createMut.isPending}>
+                {createMut.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
+                {lang === "mn" ? "QPay invoice үүсгэх" : "Create QPay invoice"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={checkPayment}
+              disabled={!data || checkingPayment || invoiceQuery.isFetching}
+            >
+              {checkingPayment || invoiceQuery.isFetching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -272,7 +282,11 @@ function PaymentPage() {
                 />
               ) : (
                 <div className="flex h-64 w-64 items-center justify-center rounded-lg border bg-muted/30">
-                  <QrCode className="h-10 w-10 text-muted-foreground" />
+                  {createMut.isPending ? (
+                    <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                  ) : (
+                    <QrCode className="h-10 w-10 text-muted-foreground" />
+                  )}
                 </div>
               )}
               <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
@@ -283,11 +297,23 @@ function PaymentPage() {
               </div>
               <Button
                 className="mt-4 w-64"
-                onClick={checkPayment}
-                disabled={demoCompleteMut.isPending}
+                onClick={data ? checkPayment : () => createMut.mutate()}
+                disabled={createMut.isPending || checkingPayment || invoiceQuery.isFetching}
               >
-                {demoCompleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {lang === "mn" ? "Төлбөр шалгах" : "Check payment"}
+                {createMut.isPending || checkingPayment || invoiceQuery.isFetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : data ? (
+                  <RefreshCw className="h-4 w-4" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
+                {data
+                  ? lang === "mn"
+                    ? "Төлбөр шалгах"
+                    : "Check payment"
+                  : lang === "mn"
+                    ? "QPay invoice үүсгэх"
+                    : "Create QPay invoice"}
               </Button>
             </div>
 
@@ -376,6 +402,25 @@ function PaymentPage() {
 function qrImageSrc(qrImage: string | null | undefined): string | undefined {
   if (!qrImage) return undefined;
   return qrImage.startsWith("data:") ? qrImage : `data:image/png;base64,${qrImage}`;
+}
+
+function paymentText(
+  lang: "mn" | "en",
+  key: "paid" | "pending" | "failed" | "checkFailed",
+): string {
+  const mn = {
+    paid: "Төлбөр амжилттай төлөгдлөө.",
+    pending: "Төлбөр хүлээгдэж байна.",
+    failed: "Төлбөр амжилтгүй эсвэл хугацаа дууссан байна.",
+    checkFailed: "Төлбөр шалгахад алдаа гарлаа. Дахин оролдоно уу.",
+  };
+  const en = {
+    paid: "Payment was successful.",
+    pending: "Payment is pending.",
+    failed: "Payment failed or expired.",
+    checkFailed: "Could not check the payment. Please try again.",
+  };
+  return (lang === "mn" ? mn : en)[key];
 }
 
 function InfoRow({

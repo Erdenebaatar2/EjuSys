@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ExamRepository extends JpaRepository<Exam, UUID> {
 
+    List<Exam> findAllByOrderByExamDateAsc();
     List<Exam> findByActiveTrueOrderByExamDateAsc();
     List<Exam> findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(
             LocalDate start,
@@ -18,6 +19,7 @@ public interface ExamRepository extends JpaRepository<Exam, UUID> {
     List<Exam> findByActiveTrueAndRegistrationEndGreaterThanEqualOrderByRegistrationEndAsc(LocalDate date);
     long countByActiveTrueAndYear(Integer year);
     boolean existsByActiveTrueAndYearAndSession(Integer year, Exam.Session session);
+    boolean existsByActiveTrueAndYearAndExamRound(Integer year, Integer examRound);
 
     default Optional<Exam> findFirstRegistrationOpen(LocalDate today) {
         return findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today, today)

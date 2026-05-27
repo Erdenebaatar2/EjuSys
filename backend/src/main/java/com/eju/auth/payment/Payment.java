@@ -22,6 +22,9 @@ public class Payment {
     @Column(name = "qpay_invoice_id")
     private String qpayInvoiceId;
 
+    @Column(name = "qpay_payment_id")
+    private String qpayPaymentId;
+
     @Column(name = "sender_invoice_no", nullable = false)
     private String senderInvoiceNo;
 
@@ -56,6 +59,8 @@ public class Payment {
     public void setApplicationId(UUID v) { this.applicationId = v; }
     public String getQpayInvoiceId() { return qpayInvoiceId; }
     public void setQpayInvoiceId(String v) { this.qpayInvoiceId = v; }
+    public String getQpayPaymentId() { return qpayPaymentId; }
+    public void setQpayPaymentId(String v) { this.qpayPaymentId = v; }
     public String getSenderInvoiceNo() { return senderInvoiceNo; }
     public void setSenderInvoiceNo(String v) { this.senderInvoiceNo = v; }
     public String getQrText() { return qrText; }

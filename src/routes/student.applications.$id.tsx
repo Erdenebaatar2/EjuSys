@@ -6,6 +6,7 @@ import type { Lang } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Accessibility,
   AlertCircle,
   ArrowLeft,
   BookOpen,
@@ -21,7 +22,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { formatDate, sessionLabel, statusLabel, subjectLabel } from "@/lib/eju-format";
+import { formatDate, statusLabel, subjectLabel } from "@/lib/eju-format";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/student/applications/$id")({
@@ -44,6 +45,8 @@ interface SelectedSubject {
   nameJa: string;
   category: string;
 }
+
+type ExamSession = "first" | "second" | "third";
 
 interface ApplicationDetailRecord {
   id: string;
@@ -72,6 +75,8 @@ interface ApplicationDetailRecord {
   scienceOption1?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY" | null;
   scienceOption2?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY" | null;
   examLanguage?: "JAPANESE" | "ENGLISH" | null;
+  specialExam?: boolean;
+  specialSupportNote?: string | null;
   jassoScholarshipApply?: boolean;
   examSite?: string | null;
   createdAt: string;
@@ -79,7 +84,8 @@ interface ApplicationDetailRecord {
     name: string;
     examDate: string;
     location: string;
-    session: "first" | "second";
+    session: ExamSession;
+    examRound?: number | null;
     year: number;
   };
   profile?: ProfileInfo | null;
@@ -146,17 +152,6 @@ function AppDetail() {
         </div>
       </div>
 
-      {!confirmed && (
-        <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 print:hidden">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            {lang === "mn"
-              ? "Төлбөр төлөгдөөгүй тул applicant form баталгаажаагүй байна. Төлбөр PAID болсон үед бүртгэл CONFIRMED болно."
-              : "This applicant form is not confirmed until payment is PAID."}
-          </p>
-        </div>
-      )}
-
       <Card className="shadow-card print:shadow-none">
         <CardHeader className="print:hidden">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -180,116 +175,138 @@ function AppDetail() {
         <CardContent className="space-y-6">
           <ApplicantForm app={app} lang={lang} />
           <div className="space-y-6 print:hidden">
-          <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
-            <div className="space-y-2">
-              <div className="aspect-[3/4] overflow-hidden rounded-lg border bg-muted">
-                {applicantPhoto(app) ? (
-                  <img
-                    src={mediaUrl(applicantPhoto(app))}
-                    alt="Applicant"
-                    className="h-full w-full object-cover"
+            <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
+              <div className="space-y-2">
+                <div className="aspect-[3/4] overflow-hidden rounded-lg border bg-muted">
+                  {applicantPhoto(app) ? (
+                    <img
+                      src={mediaUrl(applicantPhoto(app))}
+                      alt="Applicant"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                      <FileImage className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  {lang === "mn" ? "Цээж зураг" : "Applicant photo"}
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <Section title={lang === "mn" ? "Хувийн мэдээлэл" : "Personal information"}>
+                  <Field
+                    icon={UserRound}
+                    label={lang === "mn" ? "Овог" : "Last name"}
+                    value={valueOrDash(profile?.lastName)}
                   />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    <FileImage className="h-8 w-8" />
-                  </div>
+                  <Field
+                    icon={UserRound}
+                    label={lang === "mn" ? "Нэр" : "First name"}
+                    value={valueOrDash(profile?.firstName)}
+                  />
+                  <Field
+                    icon={Mail}
+                    label={lang === "mn" ? "Имэйл" : "Email"}
+                    value={valueOrDash(profile?.email)}
+                  />
+                  <Field
+                    icon={Phone}
+                    label={lang === "mn" ? "Утас" : "Phone"}
+                    value={valueOrDash(profile?.phone)}
+                  />
+                  <Field
+                    icon={Home}
+                    label={lang === "mn" ? "Оршин суугаа хаяг" : "Residential address"}
+                    value={valueOrDash(profile?.address)}
+                  />
+                  <Field
+                    icon={ShieldCheck}
+                    label={lang === "mn" ? "Бичиг баримтын дугаар" : "Document number"}
+                    value={valueOrDash(profile?.passportNumber)}
+                  />
+                </Section>
+
+                <Section title={lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}>
+                  <Field
+                    icon={Calendar}
+                    label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}
+                    value={app.exam?.examDate ? formatDate(app.exam.examDate, lang) : "-"}
+                  />
+                  <Field
+                    icon={MapPin}
+                    label={lang === "mn" ? "Байршил" : "Location"}
+                    value={valueOrDash(app.exam?.location)}
+                  />
+                  <Field
+                    icon={Hash}
+                    label={lang === "mn" ? "Он / улирал" : "Year / session"}
+                    value={
+                      app.exam
+                        ? `${app.exam.year} / ${formatExamRound(app.exam.examRound, app.exam.session, lang)}`
+                        : "-"
+                    }
+                  />
+                  <Field
+                    icon={Hash}
+                    label={lang === "mn" ? "Application code" : "Application code"}
+                    value={app.applicationNumber}
+                  />
+                  <Field
+                    icon={Accessibility}
+                    label={lang === "mn" ? "Тусгай шалгалт" : "Special exam"}
+                    value={yesNo(app.specialExam, lang)}
+                  />
+                  <Field
+                    icon={Accessibility}
+                    label={lang === "mn" ? "Тусгай дэмжлэгийн тайлбар" : "Special support note"}
+                    value={valueOrDash(app.specialSupportNote)}
+                  />
+                  <Field
+                    icon={BookOpen}
+                    label={lang === "mn" ? "Шалгалтын хэл" : "Examination language"}
+                    value={examLanguageLabel(app.examLanguage, lang)}
+                  />
+                  <Field
+                    icon={BookOpen}
+                    label={lang === "mn" ? "Тэтгэлэг хүссэн эсэх" : "Scholarship requested"}
+                    value={yesNo(app.jassoScholarshipApply, lang)}
+                  />
+                  <Field
+                    icon={BookOpen}
+                    label={lang === "mn" ? "Төлбөрийн төлөв" : "Payment status"}
+                    value={statusLabel(app.paymentStatus, lang)}
+                  />
+                  <Field
+                    icon={BookOpen}
+                    label={lang === "mn" ? "Бүртгэлийн төлөв" : "Application status"}
+                    value={statusLabel(confirmed ? "confirmed" : app.status, lang)}
+                  />
+                </Section>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-2 text-sm font-semibold">
+                {lang === "mn" ? "Сонгосон хичээлүүд" : "Selected subjects"}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {app.subjects.map((subject) => (
+                  <span
+                    key={`${subject.code}-${subject.nameJa}`}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs"
+                  >
+                    <code className="text-muted-foreground">{subject.code}</code>
+                    <span>{subjectLabel(subject.code, lang)}</span>
+                  </span>
+                ))}
+                {app.subjects.length === 0 && (
+                  <span className="text-xs text-muted-foreground">-</span>
                 )}
               </div>
-              <p className="text-center text-xs text-muted-foreground">
-                {lang === "mn" ? "Цээж зураг" : "Applicant photo"}
-              </p>
             </div>
-
-            <div className="space-y-6">
-              <Section title={lang === "mn" ? "Хувийн мэдээлэл" : "Personal information"}>
-                <Field
-                  icon={UserRound}
-                  label={lang === "mn" ? "Овог" : "Last name"}
-                  value={valueOrDash(profile?.lastName)}
-                />
-                <Field
-                  icon={UserRound}
-                  label={lang === "mn" ? "Нэр" : "First name"}
-                  value={valueOrDash(profile?.firstName)}
-                />
-                <Field
-                  icon={Mail}
-                  label={lang === "mn" ? "Имэйл" : "Email"}
-                  value={valueOrDash(profile?.email)}
-                />
-                <Field
-                  icon={Phone}
-                  label={lang === "mn" ? "Утас" : "Phone"}
-                  value={valueOrDash(profile?.phone)}
-                />
-                <Field
-                  icon={Home}
-                  label={lang === "mn" ? "Оршин суугаа хаяг" : "Residential address"}
-                  value={valueOrDash(profile?.address)}
-                />
-                <Field
-                  icon={ShieldCheck}
-                  label={lang === "mn" ? "Бичиг баримтын дугаар" : "Document number"}
-                  value={valueOrDash(profile?.passportNumber)}
-                />
-              </Section>
-
-              <Section title={lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}>
-                <Field
-                  icon={Calendar}
-                  label={lang === "mn" ? "Шалгалтын огноо" : "Exam date"}
-                  value={app.exam?.examDate ? formatDate(app.exam.examDate, lang) : "-"}
-                />
-                <Field
-                  icon={MapPin}
-                  label={lang === "mn" ? "Байршил" : "Location"}
-                  value={valueOrDash(app.exam?.location)}
-                />
-                <Field
-                  icon={Hash}
-                  label={lang === "mn" ? "Он / улирал" : "Year / session"}
-                  value={
-                    app.exam ? `${app.exam.year} / ${sessionLabel(app.exam.session, lang)}` : "-"
-                  }
-                />
-                <Field
-                  icon={Hash}
-                  label={lang === "mn" ? "Application code" : "Application code"}
-                  value={app.applicationNumber}
-                />
-                <Field
-                  icon={BookOpen}
-                  label={lang === "mn" ? "Төлбөрийн төлөв" : "Payment status"}
-                  value={statusLabel(app.paymentStatus, lang)}
-                />
-                <Field
-                  icon={BookOpen}
-                  label={lang === "mn" ? "Бүртгэлийн төлөв" : "Application status"}
-                  value={statusLabel(confirmed ? "confirmed" : app.status, lang)}
-                />
-              </Section>
-            </div>
-          </div>
-
-          <div>
-            <h2 className="mb-2 text-sm font-semibold">
-              {lang === "mn" ? "Сонгосон хичээлүүд" : "Selected subjects"}
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {app.subjects.map((subject) => (
-                <span
-                  key={`${subject.code}-${subject.nameJa}`}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs"
-                >
-                  <code className="text-muted-foreground">{subject.code}</code>
-                  <span>{subjectLabel(subject.code, lang)}</span>
-                </span>
-              ))}
-              {app.subjects.length === 0 && (
-                <span className="text-xs text-muted-foreground">-</span>
-              )}
-            </div>
-          </div>
           </div>
         </CardContent>
       </Card>
@@ -309,7 +326,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function ApplicantForm({ app, lang }: { app: ApplicationDetailRecord; lang: Lang }) {
   const profile = app.profile;
   const year = String(app.exam?.year ?? new Date(app.createdAt).getFullYear()).slice(-2);
-  const sessionNo = app.exam?.session === "second" ? "2" : "1";
+  const sessionNo = String(app.exam?.examRound ?? sessionToRound(app.exam?.session));
   const photo = applicantPhoto(app);
   const name = applicantName(app);
   const address = app.address || profile?.address || "";
@@ -357,9 +374,17 @@ function ApplicantForm({ app, lang }: { app: ApplicationDetailRecord; lang: Lang
             </tr>
             <tr>
               <LabelCell label="受験科目" sub="Subject(s)" rowSpan={2} />
-              <ChoiceCell title="1. 日本語" sub="Japanese as a Foreign Language" checked={app.subjectJapanese} />
+              <ChoiceCell
+                title="1. 日本語"
+                sub="Japanese as a Foreign Language"
+                checked={app.subjectJapanese}
+              />
               <ChoiceCell title="2-1. 理科" sub="Science" checked={app.subjectScience} />
-              <ChoiceCell title="2-2. 総合科目" sub="Japan and the World" checked={app.subjectJapanAndWorld} />
+              <ChoiceCell
+                title="2-2. 総合科目"
+                sub="Japan and the World"
+                checked={app.subjectJapanAndWorld}
+              />
               <ChoiceCell title="3. 数学" sub="Mathematics" checked={app.subjectMathematics} />
             </tr>
             <tr>
@@ -385,14 +410,18 @@ function ApplicantForm({ app, lang }: { app: ApplicationDetailRecord; lang: Lang
             <tr>
               <LabelCell label="漢字" sub="Chinese Characters" />
               <td colSpan={2}>{valueOrDash(app.nameKanji)}</td>
-              <td className="text-center">男 Male <CheckMark checked={app.sex === "MALE"} /></td>
-              <td className="text-center">女 Female <CheckMark checked={app.sex === "FEMALE"} /></td>
+              <td className="text-center">
+                男 Male <CheckMark checked={app.sex === "MALE"} />
+              </td>
+              <td className="text-center">
+                女 Female <CheckMark checked={app.sex === "FEMALE"} />
+              </td>
             </tr>
             <tr>
               <LabelCell label="生年月日" sub="Date of Birth (yyyy/mm/dd)" />
               <td colSpan={2}>{formatFormDate(app.dateOfBirth)}</td>
               <LabelCell label="国・地域コード" sub="Country/Region Code" />
-              <td>{valueOrDash(app.countryCode)}</td>
+              <td>{formatEjuCountryCode(app.countryCode)}</td>
             </tr>
             <tr>
               <LabelCell label="国籍" sub="Nationality" />
@@ -421,8 +450,20 @@ function ApplicantForm({ app, lang }: { app: ApplicationDetailRecord; lang: Lang
               <td colSpan={4}>{valueOrDash(profile?.email)}</td>
             </tr>
             <tr>
-              <LabelCell label="在籍学校名と学年または職業" sub="Name of School and Grade or Occupation" />
+              <LabelCell
+                label="在籍学校名と学年または職業"
+                sub="Name of School and Grade or Occupation"
+              />
               <td colSpan={4}>{valueOrDash(app.schoolOrOccupation)}</td>
+            </tr>
+            <tr>
+              <LabelCell label="奨学金" sub="Scholarship" />
+              <td colSpan={4}>
+                Yes <CheckMark checked={app.jassoScholarshipApply} />
+                <span className="ml-8">
+                  No <CheckMark checked={!app.jassoScholarshipApply} />
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -500,6 +541,41 @@ function valueOrDash(value?: string | null) {
   return value?.trim() ? value : "-";
 }
 
+function yesNo(value: boolean | null | undefined, lang: Lang) {
+  return value ? (lang === "mn" ? "Тийм" : "Yes") : lang === "mn" ? "Үгүй" : "No";
+}
+
+function examLanguageLabel(value: ApplicationDetailRecord["examLanguage"], lang: Lang) {
+  if (value === "JAPANESE") return lang === "mn" ? "Япон хэл" : "Japanese";
+  if (value === "ENGLISH") return lang === "mn" ? "Англи хэл" : "English";
+  return "-";
+}
+
+function sessionToRound(session?: ExamSession | null): number {
+  if (session === "second") return 2;
+  if (session === "third") return 3;
+  return 1;
+}
+
+function formatExamRound(
+  examRound: number | null | undefined,
+  session: ExamSession | null | undefined,
+  lang: Lang,
+) {
+  const round = examRound ?? sessionToRound(session);
+  return lang === "mn" ? `${round}-р шалгалт` : `Round ${round}`;
+}
+
+function formatEjuCountryCode(value?: string | null) {
+  const normalized = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (!normalized) return "-";
+  if (/^[A-Z]{2}\d{2}$/.test(normalized)) return normalized;
+  if (["MONGOLIA", "MONGOL", "MN", "MNG", "MO"].includes(normalized)) return "AS10";
+  return normalized;
+}
+
 function applicantPhoto(app: ApplicationDetailRecord) {
   return app.photoUrl || app.photoPath || null;
 }
@@ -553,12 +629,25 @@ function downloadApplication(app: ApplicationDetailRecord, lang: Lang) {
       lang === "mn" ? "Шалгалтын огноо" : "Exam date",
       app.exam?.examDate ? formatDate(app.exam.examDate, lang) : "-",
     ],
+    [
+      lang === "mn" ? "Шалгалтын дугаар" : "Exam round",
+      app.exam ? formatExamRound(app.exam.examRound, app.exam.session, lang) : "-",
+    ],
     [lang === "mn" ? "Байршил" : "Location", valueOrDash(app.exam?.location)],
     [
       lang === "mn" ? "Сонгосон хичээлүүд" : "Selected subjects",
       app.subjects.map((subject) => subjectLabel(subject.code, lang)).join(", ") || "-",
     ],
-    [lang === "mn" ? "Exam language" : "Exam language", app.examLanguage ?? "-"],
+    [lang === "mn" ? "Шалгалтын хэл" : "Exam language", examLanguageLabel(app.examLanguage, lang)],
+    [
+      lang === "mn" ? "Тэтгэлэг хүссэн эсэх" : "Scholarship requested",
+      yesNo(app.jassoScholarshipApply, lang),
+    ],
+    [lang === "mn" ? "Тусгай шалгалт" : "Special exam", yesNo(app.specialExam, lang)],
+    [
+      lang === "mn" ? "Тусгай дэмжлэгийн тайлбар" : "Special support note",
+      valueOrDash(app.specialSupportNote),
+    ],
     [lang === "mn" ? "Төлбөрийн төлөв" : "Payment status", statusLabel(app.paymentStatus, lang)],
     [lang === "mn" ? "Бүртгэсэн огноо" : "Registered at", formatDate(app.createdAt, lang)],
   ];

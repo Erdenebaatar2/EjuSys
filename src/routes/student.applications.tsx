@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatDate, sessionLabel, statusLabel } from "@/lib/eju-format";
+import { formatDate, sessionLabel } from "@/lib/eju-format";
 import type { Lang } from "@/lib/i18n";
 import {
   ArrowRight,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/student/applications")({
-  head: () => ({ meta: [{ title: "Миний бүртгэл | EJU" }] }),
+  head: () => ({ meta: [{ title: "Миний бүртгэлүүд | EJU" }] }),
   component: StudentApplications,
 });
 
@@ -52,12 +52,9 @@ function StudentApplications() {
   const { lang }: { lang: Lang } = useLang();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  const { data: application, isLoading } = useQuery({
-    queryKey: ["student", "application"],
-    queryFn: () =>
-      apiGet<StudentApplicationSummary | undefined>("/api/student/application").catch(
-        () => undefined,
-      ),
+  const { data: applications = [], isLoading } = useQuery({
+    queryKey: ["student", "applications"],
+    queryFn: () => apiGet<StudentApplicationSummary[]>("/api/student/application/all").catch(() => []),
   });
 
   if (pathname !== "/student/applications") {
@@ -72,20 +69,20 @@ function StudentApplications() {
     );
   }
 
-  const hasApplication = Boolean(application);
-  const paymentStatus = application?.paymentStatus ?? "-";
-  const paymentDone = paymentStatus === "paid";
+  const latestApplication = applications[0];
+  const paidCount = applications.filter((app) => app.paymentStatus === "paid").length;
+  const pendingPaymentCount = applications.filter((app) => app.paymentStatus !== "paid").length;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <StudentPageHeader
         icon={FileText}
         eyebrow={lang === "mn" ? "Оюутны бүртгэл" : "Student applications"}
-        title={lang === "mn" ? "Миний бүртгэл" : "My application"}
+        title={lang === "mn" ? "Миний бүртгэлүүд" : "My applications"}
         description={
           lang === "mn"
-            ? "Илгээсэн EJU бүртгэл, төлбөрийн мэдээллээ нэг дороос харна."
-            : "Review your submitted EJU application and payment state."
+            ? "Илгээсэн EJU бүртгэл болон төлбөрийн төлөвөө эндээс харна."
+            : "Review your submitted EJU applications and payment state."
         }
         actions={
           <Button asChild>
@@ -101,38 +98,34 @@ function StudentApplications() {
         <StudentMetricCard
           icon={ClipboardList}
           label={lang === "mn" ? "Нийт бүртгэл" : "Applications"}
-          value={hasApplication ? 1 : 0}
-          helper={lang === "mn" ? "Одоогийн илгээсэн бүртгэл" : "Current submitted record"}
+          value={applications.length}
+          helper={lang === "mn" ? "Илгээсэн бүртгэлүүд" : "Submitted records"}
           tone="blue"
         />
         <StudentMetricCard
           icon={CreditCard}
-          label={lang === "mn" ? "Төлбөр" : "Payment"}
-          value={paymentStatus === "-" ? "-" : statusLabel(paymentStatus, lang)}
+          label={lang === "mn" ? "Төлбөр төлөгдсөн" : "Paid"}
+          value={paidCount}
           helper={
-            paymentDone
-              ? lang === "mn"
-                ? "Баталгаажсан"
-                : "Confirmed"
-              : lang === "mn"
-                ? "Төлбөр шалгах"
-                : "Needs attention"
+            lang === "mn"
+              ? `Төлөгдөөгүй: ${pendingPaymentCount}`
+              : `Pending payment: ${pendingPaymentCount}`
           }
-          tone={paymentDone ? "emerald" : "teal"}
+          tone={pendingPaymentCount > 0 ? "teal" : "emerald"}
         />
         <StudentMetricCard
           icon={CalendarDays}
-          label={lang === "mn" ? "Шалгалтын өдөр" : "Exam date"}
-          value={application?.exam?.examDate ? formatDate(application.exam.examDate, lang) : "-"}
+          label={lang === "mn" ? "Сүүлийн шалгалт" : "Latest exam"}
+          value={latestApplication?.exam?.examDate ? formatDate(latestApplication.exam.examDate, lang) : "-"}
           helper={
-            application?.exam?.location ??
+            latestApplication?.exam?.location ??
             (lang === "mn" ? "Байршил тодорхойгүй" : "No location yet")
           }
           tone="violet"
         />
       </div>
 
-      {!application ? (
+      {applications.length === 0 ? (
         <StudentPanel>
           <StudentEmptyState>
             <div className="mx-auto max-w-md space-y-3">
@@ -141,7 +134,7 @@ function StudentApplications() {
               </p>
               <p>
                 {lang === "mn"
-                  ? "Нээлттэй шалгалтаа сонгоод бүртгэлийн маягтаа эхлүүлнэ үү."
+                  ? "Нээлттэй шалгалт сонгоод бүртгэлийн маягтаа эхлүүлнэ үү."
                   : "Choose an open exam and start your application form."}
               </p>
               <Button asChild variant="outline" size="sm">
@@ -156,57 +149,57 @@ function StudentApplications() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
           <StudentPanel
-            title={lang === "mn" ? "Одоогийн бүртгэл" : "Current application"}
+            title={lang === "mn" ? "Миний бүртгэлүүд" : "My applications"}
             description={
               lang === "mn"
-                ? "Шалгалтын мэдээлэл, бүртгэлийн дугаар, төлбөрийн товч мэдээлэл."
-                : "Exam details, application number, and payment summary."
+                ? "Шалгалт тус бүрийн бүртгэл, дугаар, төлбөрийн төлөв."
+                : "Exam details, application numbers, and payment summaries."
             }
           >
-            <ApplicationCard application={application} lang={lang} />
+            <div className="space-y-4">
+              {applications.map((application) => (
+                <ApplicationCard key={application.id} application={application} lang={lang} />
+              ))}
+            </div>
           </StudentPanel>
 
           <StudentPanel
             title={lang === "mn" ? "Төлөвийн хураангуй" : "Status summary"}
             description={
               lang === "mn"
-                ? "Дараагийн хийх зүйлээ эндээс хурдан шалгана."
-                : "Quickly confirm what needs to happen next."
+                ? "Сүүлийн бүртгэл болон төлбөрийн мэдээллийг хурдан шалгана."
+                : "Quickly confirm the latest application and payment state."
             }
           >
             <div className="space-y-3">
               <SummaryRow
-                label={lang === "mn" ? "Бүртгэлийн дугаар" : "Application number"}
-                value={application.applicationNumber}
+                label={lang === "mn" ? "Сүүлийн бүртгэлийн дугаар" : "Latest application"}
+                value={latestApplication?.applicationNumber ?? "-"}
                 mono
               />
-              <SummaryRow
-                label={lang === "mn" ? "Төлбөр" : "Payment"}
-                value={<StatusBadge status={application.paymentStatus} />}
-              />
-              <SummaryRow
-                label={lang === "mn" ? "Илгээсэн огноо" : "Submitted"}
-                value={formatDate(application.createdAt, lang)}
-              />
+              <SummaryRow label={lang === "mn" ? "Нийт бүртгэл" : "Applications"} value={applications.length} />
+              <SummaryRow label={lang === "mn" ? "Төлөгдсөн" : "Paid"} value={paidCount} />
 
               <div className="space-y-2 pt-2">
-                {application.paymentStatus !== "paid" ? (
+                {latestApplication?.paymentStatus !== "paid" ? (
                   <Button asChild className="w-full justify-between">
-                    <Link to="/student/payment/$id" params={{ id: application.id }}>
+                    <Link to="/student/payment/$id" params={{ id: latestApplication.id }}>
                       {lang === "mn" ? "Төлбөр төлөх" : "Pay now"}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 ) : null}
-                <Button asChild className="w-full justify-between">
-                  <Link to="/student/applications/$id" params={{ id: application.id }}>
-                    {lang === "mn" ? "Applicant form харах" : "View applicant form"}
-                    <Download className="h-4 w-4" />
-                  </Link>
-                </Button>
+                {latestApplication ? (
+                  <Button asChild className="w-full justify-between">
+                    <Link to="/student/applications/$id" params={{ id: latestApplication.id }}>
+                      {lang === "mn" ? "Applicant form харах" : "View applicant form"}
+                      <Download className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button asChild variant="outline" className="w-full justify-between">
                   <Link to="/student/exams">
-                    {lang === "mn" ? "Шалгалтын мэдээлэл" : "Exam information"}
+                    {lang === "mn" ? "Шалгалтууд" : "Exam information"}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -248,20 +241,22 @@ function ApplicationCard({
             </p>
           ) : null}
         </div>
-        {application.paymentStatus !== "paid" ? (
-          <Button asChild size="sm">
-            <Link to="/student/payment/$id" params={{ id: application.id }}>
-              <CreditCard className="h-4 w-4" />
-              {lang === "mn" ? "Төлөх" : "Pay"}
+        <div className="flex flex-wrap gap-2">
+          {application.paymentStatus !== "paid" ? (
+            <Button asChild size="sm">
+              <Link to="/student/payment/$id" params={{ id: application.id }}>
+                <CreditCard className="h-4 w-4" />
+                {lang === "mn" ? "Төлөх" : "Pay"}
+              </Link>
+            </Button>
+          ) : null}
+          <Button asChild size="sm" variant="outline">
+            <Link to="/student/applications/$id" params={{ id: application.id }}>
+              <Download className="h-4 w-4" />
+              {lang === "mn" ? "Form" : "Form"}
             </Link>
           </Button>
-        ) : null}
-        <Button asChild size="sm" variant="outline">
-          <Link to="/student/applications/$id" params={{ id: application.id }}>
-            <Download className="h-4 w-4" />
-            {lang === "mn" ? "Form" : "Form"}
-          </Link>
-        </Button>
+        </div>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">

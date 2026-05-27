@@ -43,8 +43,8 @@ public class AdminStatsController {
                                      @RequestParam(required = false) String session,
                                      @RequestParam(required = false) UUID examId) {
         List<Application> applications = appRepo.findAll();
-        List<Exam> activeExams = examRepo.findByActiveTrueOrderByExamDateAsc();
-        Map<UUID, Exam> examMap = activeExams.stream().collect(Collectors.toMap(Exam::getId, x -> x));
+        List<Exam> exams = examRepo.findAllByOrderByExamDateAsc();
+        Map<UUID, Exam> examMap = exams.stream().collect(Collectors.toMap(Exam::getId, x -> x));
         Map<UUID, Profile> profileMap = profileRepo.findAll().stream().collect(Collectors.toMap(Profile::getId, x -> x));
 
         List<Application> filtered = applications.stream()
@@ -90,7 +90,7 @@ public class AdminStatsController {
                 .filter(e -> e != null && e.getLocation() != null)
                 .collect(Collectors.groupingBy(Exam::getLocation, LinkedHashMap::new, Collectors.counting()));
 
-        List<Map<String, Object>> examSeatStats = activeExams.stream()
+        List<Map<String, Object>> examSeatStats = exams.stream()
                 .filter(e -> (year == null || year.equals(e.getYear())) && (session == null || session.isBlank() || e.getSession().name().equals(session.toUpperCase())))
                 .map(e -> {
                     long registered = reportApplications.stream().filter(a -> e.getId().equals(a.getExamId())).count();
@@ -102,6 +102,7 @@ public class AdminStatsController {
                     row.put("name", e.getName());
                     row.put("year", e.getYear());
                     row.put("session", e.getSession().name().toLowerCase());
+                    row.put("examRound", e.getExamRound());
                     row.put("location", e.getLocation());
                     row.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());
                     row.put("hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName());
@@ -116,7 +117,7 @@ public class AdminStatsController {
             Exam exam = examMap.get(app.getExamId());
             Profile profile = profileMap.get(app.getUserId());
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("applicationNumber", app.getApplicationNumber());
+            row.put("applicationNumber", exportApplicationNumber(app, exam, reportApplications));
             row.put("status", app.getStatus().name().toLowerCase());
             row.put("paymentStatus", app.getPaymentStatus().name().toLowerCase());
             row.put("createdAt", app.getCreatedAt());
@@ -129,8 +130,12 @@ public class AdminStatsController {
             row.put("subjectScience", app.isSubjectScience());
             row.put("subjectJapanAndWorld", app.isSubjectJapanAndWorld());
             row.put("subjectMathematics", app.isSubjectMathematics());
+            row.put("scienceOption1", app.getScienceOption1() == null ? null : app.getScienceOption1().name());
+            row.put("scienceOption2", app.getScienceOption2() == null ? null : app.getScienceOption2().name());
             row.put("examLanguage", app.getExamLanguage() == null ? null : app.getExamLanguage().name());
             row.put("jassoScholarshipApply", app.isJassoScholarshipApply());
+            row.put("specialExam", app.isSpecialExam());
+            row.put("specialSupportNote", app.getSpecialSupportNote());
             row.put("schoolOrOccupation", app.getSchoolOrOccupation());
             row.put("photoUrl", app.getPhotoUrl());
             row.put("profileEmail", profile == null ? null : profile.getEmail());
@@ -142,6 +147,7 @@ public class AdminStatsController {
             row.put("hostCity", exam == null || exam.getExamHost() == null ? null : exam.getExamHost().getDisplayName());
             row.put("examSession", exam == null ? null : exam.getSession().name().toLowerCase());
             row.put("examYear", exam == null ? null : exam.getYear());
+            row.put("examRound", exam == null ? null : exam.getExamRound());
             rows.add(row);
         }
 
@@ -157,20 +163,50 @@ public class AdminStatsController {
         response.put("examSeatStats", examSeatStats);
         response.put("rows", rows);
         response.put("students", profileMap.values().stream().map(p -> studentRow(p, reportApplications)).toList());
-        response.put("exams", activeExams.stream()
+        response.put("exams", exams.stream()
                 .sorted(Comparator.comparing(Exam::getExamDate))
-                .map(e -> Map.of(
-                        "id", e.getId(),
-                        "name", e.getName(),
-                        "year", e.getYear(),
-                        "session", e.getSession().name().toLowerCase(),
-                        "date", e.getExamDate(),
-                        "location", e.getLocation(),
-                        "examHost", e.getExamHost() == null ? null : e.getExamHost().name(),
-                        "hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName()
-                ))
+                .map(e -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("id", e.getId());
+                    row.put("name", e.getName());
+                    row.put("year", e.getYear());
+                    row.put("session", e.getSession().name().toLowerCase());
+                    row.put("examRound", e.getExamRound());
+                    row.put("date", e.getExamDate());
+                    row.put("location", e.getLocation());
+                    row.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());
+                    row.put("hostCity", e.getExamHost() == null ? e.getLocation() : e.getExamHost().getDisplayName());
+                    return row;
+                })
                 .toList());
         return response;
+    }
+
+    private String exportApplicationNumber(Application app, Exam exam, List<Application> reportApplications) {
+        String current = app.getApplicationNumber();
+        if (current != null && current.startsWith("AS10")) {
+            return current;
+        }
+        if (exam == null) {
+            return current == null ? "" : current.replaceFirst("^XX", "AS10");
+        }
+        long sequence = reportApplications.stream()
+                .filter(a -> exam.getId().equals(a.getExamId()))
+                .sorted(Comparator.comparing(Application::getCreatedAt))
+                .takeWhile(a -> !a.getId().equals(app.getId()))
+                .count() + 1;
+        return "AS10" + examCode(exam) + String.format("%03d", sequence);
+    }
+
+    private String examCode(Exam exam) {
+        int sourceYear = exam.getYear() != null
+                ? exam.getYear()
+                : exam.getExamDate() == null
+                ? java.time.Year.now().getValue()
+                : exam.getExamDate().getYear();
+        int year = Math.floorMod(sourceYear, 10);
+        int round = exam.getExamRound() == null || exam.getExamRound() < 1 ? 1 : exam.getExamRound();
+        return String.valueOf(year) + round;
     }
 
     private boolean isBootstrapTestApplication(Application app, Map<UUID, Profile> profileMap) {

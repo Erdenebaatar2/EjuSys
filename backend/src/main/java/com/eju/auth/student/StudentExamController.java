@@ -46,13 +46,10 @@ public class StudentExamController {
             appRepo.findByUserId(userId).forEach(app -> applicationsByExamId.put(app.getExamId(), app));
         }
 
+        LocalDate today = LocalDate.now();
         Map<UUID, Exam> examsById = new LinkedHashMap<>();
-        examRepo.findByActiveTrueOrderByExamDateAsc()
+        examRepo.findByActiveTrueAndRegistrationStartLessThanEqualAndRegistrationEndGreaterThanEqualOrderByExamDateAsc(today, today)
                 .forEach(exam -> examsById.put(exam.getId(), exam));
-        if (!applicationsByExamId.isEmpty()) {
-            examRepo.findAllById(applicationsByExamId.keySet())
-                    .forEach(exam -> examsById.putIfAbsent(exam.getId(), exam));
-        }
 
         return examsById.values().stream()
                 .sorted(Comparator.comparing(Exam::getExamDate))
@@ -99,8 +96,12 @@ public class StudentExamController {
         m.put("registrationEnd", e.getRegistrationEnd().toString());
         m.put("session", e.getSession().name().toLowerCase());
         m.put("year", e.getYear());
+        m.put("examRound", e.getExamRound());
         m.put("active", e.isActive());
         m.put("isActive", e.isActive());
+        m.put("registrationOpen", e.isActive()
+                && !e.getRegistrationStart().isAfter(LocalDate.now())
+                && !e.getRegistrationEnd().isBefore(LocalDate.now()));
         m.put("description", e.getDescription());
         m.put("examInfoLocation", e.getExamInfoLocation());
         m.put("examInfoStartTime", e.getExamInfoStartTime() == null ? null : e.getExamInfoStartTime().toString());

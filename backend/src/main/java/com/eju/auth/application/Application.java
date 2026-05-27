@@ -123,6 +123,12 @@ public class Application {
     @Column(name = "jasso_scholarship_apply", nullable = false)
     private boolean jassoScholarshipApply;
 
+    @Column(name = "special_exam")
+    private Boolean specialExam = false;
+
+    @Column(name = "special_support_note", columnDefinition = "text")
+    private String specialSupportNote;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "exam_site")
     private ExamSite examSite;
@@ -212,6 +218,10 @@ public class Application {
     public void setExamLanguage(ExamLanguage examLanguage) { this.examLanguage = examLanguage; }
     public boolean isJassoScholarshipApply() { return jassoScholarshipApply; }
     public void setJassoScholarshipApply(boolean jassoScholarshipApply) { this.jassoScholarshipApply = jassoScholarshipApply; }
+    public boolean isSpecialExam() { return Boolean.TRUE.equals(specialExam); }
+    public void setSpecialExam(Boolean specialExam) { this.specialExam = Boolean.TRUE.equals(specialExam); }
+    public String getSpecialSupportNote() { return specialSupportNote; }
+    public void setSpecialSupportNote(String specialSupportNote) { this.specialSupportNote = specialSupportNote; }
     public ExamSite getExamSite() { return examSite; }
     public void setExamSite(ExamSite examSite) { this.examSite = examSite; }
     public String getRejectionReason() { return rejectionReason; }

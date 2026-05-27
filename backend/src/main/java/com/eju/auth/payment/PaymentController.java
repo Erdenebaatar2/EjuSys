@@ -47,10 +47,4 @@ public class PaymentController {
         Application app = ownedApp(id, auth);
         return ResponseEntity.ok(service.refreshAndGet(app));
     }
-
-    @PostMapping("/qpay/demo-complete")
-    public ResponseEntity<?> completeDemo(@PathVariable UUID id, Authentication auth) {
-        Application app = ownedApp(id, auth);
-        return ResponseEntity.ok(service.completeDemoPayment(app));
-    }
 }

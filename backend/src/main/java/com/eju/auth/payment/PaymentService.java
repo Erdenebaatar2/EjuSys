@@ -36,7 +36,7 @@ public class PaymentService {
 
     public Map<String, Object> getOrCreateInvoice(Application app) {
         Payment existing = paymentRepo.findFirstByApplicationIdOrderByCreatedAtDesc(app.getId()).orElse(null);
-        if (existing != null && existing.getStatus() == Payment.Status.NEW
+        if (existing != null && (existing.getStatus() == Payment.Status.NEW || existing.getStatus() == Payment.Status.PENDING)
                 && existing.getQpayInvoiceId() != null) {
             return toResponse(existing);
         }
@@ -45,20 +45,6 @@ public class PaymentService {
                 ? "EJU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()
                 : app.getApplicationNumber();
         int amount = examFeeFor(app);
-
-        if (isDemoMode()) {
-            Payment p = new Payment();
-            p.setApplicationId(app.getId());
-            p.setSenderInvoiceNo(senderNo);
-            p.setQpayInvoiceId("DEMO-" + app.getId());
-            p.setQrText("QPAY2:" + senderNo + ":" + amount);
-            p.setQrImage(demoQrImage(senderNo));
-            p.setDeeplinksJson("[]");
-            p.setAmount(amount);
-            p.setStatus(Payment.Status.NEW);
-            p = paymentRepo.save(p);
-            return toResponse(p);
-        }
 
         String callback = props.getCallbackUrl();
         if (callback != null && !callback.isBlank()) {
@@ -84,7 +70,7 @@ public class PaymentService {
         p.setQrImage(resp.path("qr_image").asText(null));
         p.setDeeplinksJson(resp.has("urls") ? resp.get("urls").toString() : "[]");
         p.setAmount(amount);
-        p.setStatus(Payment.Status.NEW);
+        p.setStatus(Payment.Status.PENDING);
         p = paymentRepo.save(p);
         return toResponse(p);
     }
@@ -102,21 +88,13 @@ public class PaymentService {
         if (p == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found");
         }
-        if (isDemoInvoice(p)) {
-            return toResponse(p);
-        }
-        if (p.getStatus() == Payment.Status.NEW && p.getQpayInvoiceId() != null) {
+        if ((p.getStatus() == Payment.Status.NEW || p.getStatus() == Payment.Status.PENDING)
+                && p.getQpayInvoiceId() != null) {
             try {
                 JsonNode resp = qpay.checkPayment(p.getQpayInvoiceId());
-                int count = resp.path("count").asInt(0);
-                String paymentStatus = resp.path("rows").isArray() && resp.path("rows").size() > 0
-                        ? resp.path("rows").get(0).path("payment_status").asText("")
-                        : "";
-                if (count > 0 && "PAID".equalsIgnoreCase(paymentStatus)) {
-                    markPaid(app, p);
-                }
-            } catch (Exception ignored) {
-                // best-effort; client can retry
+                applyQPayStatus(app, p, resp);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Төлбөр шалгахад алдаа гарлаа. Дахин оролдоно уу.");
             }
         }
         return toResponse(p);
@@ -127,36 +105,33 @@ public class PaymentService {
         if (app == null) return;
         Payment p = paymentRepo.findFirstByApplicationIdOrderByCreatedAtDesc(applicationId).orElse(null);
         if (p == null || p.getStatus() == Payment.Status.PAID) return;
-        if (isDemoInvoice(p)) {
-            markPaid(app, p);
-            return;
-        }
         try {
             JsonNode resp = qpay.checkPayment(p.getQpayInvoiceId());
-            int count = resp.path("count").asInt(0);
-            String paymentStatus = resp.path("rows").isArray() && resp.path("rows").size() > 0
-                    ? resp.path("rows").get(0).path("payment_status").asText("")
-                    : "";
-            if (count > 0 && "PAID".equalsIgnoreCase(paymentStatus)) {
-                markPaid(app, p);
-            }
+            applyQPayStatus(app, p, resp);
         } catch (Exception ignored) { }
     }
 
-    public synchronized Map<String, Object> completeDemoPayment(Application app) {
-        Payment p = paymentRepo.findFirstByApplicationIdOrderByCreatedAtDesc(app.getId()).orElse(null);
-        if (p == null) {
-            getOrCreateInvoice(app);
-            p = paymentRepo.findFirstByApplicationIdOrderByCreatedAtDesc(app.getId()).orElse(null);
+    private void applyQPayStatus(Application app, Payment p, JsonNode resp) {
+        int count = resp.path("count").asInt(0);
+        JsonNode firstRow = resp.path("rows").isArray() && resp.path("rows").size() > 0
+                ? resp.path("rows").get(0)
+                : null;
+        String paymentStatus = firstRow == null ? "" : firstRow.path("payment_status").asText("");
+        if (firstRow != null && firstRow.hasNonNull("payment_id")) {
+            p.setQpayPaymentId(firstRow.get("payment_id").asText());
         }
-        if (p == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found");
+        if (count > 0 && "PAID".equalsIgnoreCase(paymentStatus)) {
+            markPaid(app, p);
+        } else if ("FAILED".equalsIgnoreCase(paymentStatus)) {
+            p.setStatus(Payment.Status.FAILED);
+            paymentRepo.save(p);
+        } else if ("EXPIRED".equalsIgnoreCase(paymentStatus)) {
+            p.setStatus(Payment.Status.EXPIRED);
+            paymentRepo.save(p);
+        } else if (p.getStatus() == Payment.Status.NEW) {
+            p.setStatus(Payment.Status.PENDING);
+            paymentRepo.save(p);
         }
-        if (!isDemoInvoice(p)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Demo payment is not enabled");
-        }
-        markPaid(app, p);
-        return toResponse(p);
     }
 
     private void markPaid(Application app, Payment p) {
@@ -170,47 +145,10 @@ public class PaymentService {
         appRepo.save(app);
     }
 
-    private boolean isDemoMode() {
-        return isBlank(props.getUsername()) || isBlank(props.getPassword()) || isBlank(props.getInvoiceCode());
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private boolean isDemoInvoice(Payment p) {
-        return p.getQpayInvoiceId() != null && p.getQpayInvoiceId().startsWith("DEMO-");
-    }
-
-    private String demoQrImage(String senderNo) {
-        String label = senderNo.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-        String svg = """
-                <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-                  <rect width="240" height="240" fill="white"/>
-                  <rect x="20" y="20" width="54" height="54" fill="#111827"/>
-                  <rect x="32" y="32" width="30" height="30" fill="white"/>
-                  <rect x="166" y="20" width="54" height="54" fill="#111827"/>
-                  <rect x="178" y="32" width="30" height="30" fill="white"/>
-                  <rect x="20" y="166" width="54" height="54" fill="#111827"/>
-                  <rect x="32" y="178" width="30" height="30" fill="white"/>
-                  <g fill="#111827">
-                    <rect x="94" y="28" width="14" height="14"/><rect x="122" y="28" width="14" height="14"/><rect x="94" y="56" width="14" height="14"/>
-                    <rect x="88" y="92" width="16" height="16"/><rect x="116" y="92" width="16" height="16"/><rect x="144" y="92" width="16" height="16"/><rect x="200" y="92" width="16" height="16"/>
-                    <rect x="88" y="120" width="16" height="16"/><rect x="144" y="120" width="16" height="16"/><rect x="172" y="120" width="16" height="16"/>
-                    <rect x="92" y="152" width="14" height="14"/><rect x="120" y="152" width="14" height="14"/><rect x="148" y="152" width="14" height="14"/><rect x="176" y="152" width="14" height="14"/>
-                    <rect x="92" y="180" width="14" height="14"/><rect x="148" y="180" width="14" height="14"/><rect x="204" y="180" width="14" height="14"/>
-                    <rect x="120" y="204" width="14" height="14"/><rect x="176" y="204" width="14" height="14"/>
-                  </g>
-                  <text x="120" y="232" text-anchor="middle" font-family="Arial" font-size="10" font-weight="700" fill="#111827">QPay2</text>
-                </svg>
-                """;
-        return "data:image/svg+xml;base64," + java.util.Base64.getEncoder()
-                .encodeToString(svg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-    }
-
     private Map<String, Object> toResponse(Payment p) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("paymentId", p.getId());
+        m.put("qpayPaymentId", p.getQpayPaymentId());
         m.put("applicationId", p.getApplicationId());
         m.put("invoiceId", p.getQpayInvoiceId());
         m.put("senderInvoiceNo", p.getSenderInvoiceNo());
@@ -220,7 +158,6 @@ public class PaymentService {
         m.put("qrImage", p.getQrImage());
         m.put("deeplinks", p.getDeeplinksJson());
         m.put("paidAt", p.getPaidAt());
-        m.put("demo", isDemoInvoice(p));
         return m;
     }
 }

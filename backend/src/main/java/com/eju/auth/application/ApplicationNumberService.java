@@ -12,10 +12,9 @@ public class ApplicationNumberService {
         this.appRepo = appRepo;
     }
 
-    public String nextNumber(Exam exam, Application app) {
-        String subjectCode = subjectCode(app);
-        String prefix = regionCode(app.getCountryCode()) + "-" + examCode(exam) + "-" + subjectCode;
-        int sequenceWidth = Math.max(3, 6 - subjectCode.length());
+    public synchronized String nextNumber(Exam exam, Application app) {
+        String prefix = regionCode() + examCode(exam);
+        int sequenceWidth = 3;
         long next = appRepo.countByApplicationNumberStartingWith(prefix) + 1;
         String candidate;
         do {
@@ -25,24 +24,18 @@ public class ApplicationNumberService {
         return candidate;
     }
 
-    private String regionCode(String countryCode) {
-        if (countryCode == null || countryCode.isBlank()) return "XX";
-        String normalized = countryCode.trim().toUpperCase();
-        return normalized.length() >= 2 ? normalized.substring(0, 2) : normalized;
+    private String regionCode() {
+        return "AS10";
     }
 
     private String examCode(Exam exam) {
-        int year = Math.floorMod(exam.getYear(), 100);
-        int session = exam.getSession() == Exam.Session.SECOND ? 2 : 1;
-        return String.format("%02d%02d", year, session);
-    }
-
-    private String subjectCode(Application app) {
-        StringBuilder code = new StringBuilder();
-        if (app.isSubjectJapanese()) code.append("1");
-        if (app.isSubjectMathematics()) code.append("1");
-        if (app.isSubjectScience()) code.append("2");
-        if (app.isSubjectJapanAndWorld()) code.append("3");
-        return code.isEmpty() ? "0" : code.toString();
+        int sourceYear = exam.getYear() != null
+                ? exam.getYear()
+                : exam.getExamDate() == null
+                ? java.time.Year.now().getValue()
+                : exam.getExamDate().getYear();
+        int year = Math.floorMod(sourceYear, 10);
+        int round = exam.getExamRound() == null || exam.getExamRound() < 1 ? 1 : exam.getExamRound();
+        return String.valueOf(year) + round;
     }
 }

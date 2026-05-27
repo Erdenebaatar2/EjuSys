@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "qpay")
 public class QPayProperties {
-    private String baseUrl = "https://merchant.qpay.mn/v2";
+    private String baseUrl = "https://merchant-sandbox.qpay.mn/v2";
     private String username = "";
     private String password = "";
     private String invoiceCode = "";

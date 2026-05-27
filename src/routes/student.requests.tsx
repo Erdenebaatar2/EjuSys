@@ -127,11 +127,6 @@ function StudentRequests() {
 
         <StudentPanel
           title={lang === "mn" ? "Миний илгээсэн хүсэлтүүд" : "My sent requests"}
-          description={
-            lang === "mn"
-              ? "Админ уншсан эсэхийг эндээс харна."
-              : "Check whether the admin has read your requests."
-          }
         >
           {isLoading ? (
             <div className="py-12 text-center">

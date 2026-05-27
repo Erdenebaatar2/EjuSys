@@ -65,7 +65,12 @@ interface ApplicationRow {
   subjectJapanAndWorld?: boolean;
   subjectMathematics?: boolean;
   scienceOption1?: string | null;
+  scienceOption2?: string | null;
   mathCourse?: string | null;
+  examLanguage?: "JAPANESE" | "ENGLISH" | null;
+  jassoScholarshipApply?: boolean;
+  specialExam?: boolean;
+  specialSupportNote?: string | null;
   createdAt: string;
   profile?: {
     firstName: string;
@@ -78,6 +83,7 @@ interface ApplicationRow {
     name: string;
     year: number;
     session: string;
+    examRound?: number | null;
     examDate: string;
     location: string;
   };
@@ -114,16 +120,7 @@ function AdminApplications() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: [
-      "admin",
-      "applications",
-      paymentStatus,
-      examId,
-      fromDate,
-      toDate,
-      search,
-      page,
-    ],
+    queryKey: ["admin", "applications", paymentStatus, examId, fromDate, toDate, search, page],
     queryFn: () => {
       const params = new URLSearchParams();
       if (paymentStatus !== "all") params.set("paymentStatus", paymentStatus);
@@ -161,13 +158,8 @@ function AdminApplications() {
 
   const activeFilterCount = useMemo(
     () =>
-      [
-        paymentStatus !== "all",
-        examId !== "all",
-        !!fromDate,
-        !!toDate,
-        !!search,
-      ].filter(Boolean).length,
+      [paymentStatus !== "all", examId !== "all", !!fromDate, !!toDate, !!search].filter(Boolean)
+        .length,
     [examId, fromDate, paymentStatus, search, toDate],
   );
   const total = data?.total ?? 0;
@@ -376,6 +368,14 @@ function AdminApplications() {
                     <div className="mt-1 text-xs text-muted-foreground">
                       {formatAdminDate(a.createdAt, lang)}
                     </div>
+                    {a.specialExam && (
+                      <Badge
+                        variant="outline"
+                        className="mt-2 border-amber-200 bg-amber-50 text-amber-700"
+                      >
+                        {lang === "mn" ? "Тусгай шалгалт" : "Special exam"}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium text-foreground">{fullName(a)}</div>
@@ -477,6 +477,14 @@ function AdminApplications() {
           {detail && (
             <div className="grid gap-3 text-sm sm:grid-cols-2">
               <InfoField label={lang === "mn" ? "Шалгалт" : "Exam"} value={detail.exam?.name} />
+              <InfoField
+                label={lang === "mn" ? "Шалгалтын он" : "Exam year"}
+                value={detail.exam?.year == null ? null : String(detail.exam.year)}
+              />
+              <InfoField
+                label={lang === "mn" ? "Шалгалтын дугаар" : "Exam round"}
+                value={formatExamRound(detail.exam?.examRound, lang)}
+              />
               <InfoField label={lang === "mn" ? "Огноо" : "Date"} value={detail.exam?.examDate} />
               <InfoField
                 label={lang === "mn" ? "Байршил" : "Location"}
@@ -496,24 +504,41 @@ function AdminApplications() {
                 value={detail.targetUniversity}
               />
               <InfoField
-                label={lang === "mn" ? "Зураг" : "Photo"}
+                label={lang === "mn" ? "Зургийн төлөв" : "Photo status"}
+                value={photoStatus(detail, lang)}
+              />
+              <InfoField
+                label={lang === "mn" ? "Зураг файл" : "Photo file"}
                 value={detail.photoUrl ?? detail.photoPath}
               />
               <InfoField
                 label={lang === "mn" ? "Паспорт файл" : "Passport file"}
                 value={detail.passportScanPath}
               />
+              <InfoField
+                label={lang === "mn" ? "Шалгалтын хэл" : "Examination language"}
+                value={formatExamLanguage(detail.examLanguage, lang)}
+              />
+              <InfoField
+                label={lang === "mn" ? "Тэтгэлэг хүссэн эсэх" : "Scholarship requested"}
+                value={yesNo(detail.jassoScholarshipApply, lang)}
+              />
+              <InfoField
+                label={lang === "mn" ? "Төлбөрийн төлөв" : "Payment status"}
+                value={detail.paymentStatus}
+              />
+              <InfoField
+                label={lang === "mn" ? "Тусгай шалгалт" : "Special exam"}
+                value={yesNo(detail.specialExam, lang)}
+              />
+              <InfoField
+                label={lang === "mn" ? "Тусгай дэмжлэгийн тайлбар" : "Special support note"}
+                value={detail.specialSupportNote}
+              />
               <div className="sm:col-span-2">
                 <InfoField
                   label={lang === "mn" ? "Сонгосон хичээлүүд" : "Selected subjects"}
-                  value={[
-                    detail.subjectJapanese ? "Japanese" : "",
-                    detail.subjectScience ? `Science ${detail.scienceOption1 ?? ""}` : "",
-                    detail.subjectJapanAndWorld ? "General" : "",
-                    detail.subjectMathematics ? `Math ${detail.mathCourse ?? ""}` : "",
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
+                  value={selectedSubjects(detail)}
                 />
               </div>
             </div>
@@ -576,6 +601,45 @@ function InfoField({ label, value }: { label: string; value?: string | null }) {
       <div className="mt-1 break-words font-medium">{value || "—"}</div>
     </div>
   );
+}
+
+function yesNo(value: boolean | null | undefined, lang: "mn" | "en") {
+  return value ? (lang === "mn" ? "Тийм" : "Yes") : lang === "mn" ? "Үгүй" : "No";
+}
+
+function photoStatus(application: ApplicationRow, lang: "mn" | "en") {
+  return application.photoUrl || application.photoPath
+    ? lang === "mn"
+      ? "Оруулсан"
+      : "Uploaded"
+    : lang === "mn"
+      ? "Оруулаагүй"
+      : "Missing";
+}
+
+function formatExamRound(value: number | null | undefined, lang: "mn" | "en") {
+  if (value == null) return null;
+  return lang === "mn" ? `${value}-р шалгалт` : `Round ${value}`;
+}
+
+function formatExamLanguage(value: ApplicationRow["examLanguage"], lang: "mn" | "en") {
+  if (value === "JAPANESE") return lang === "mn" ? "Япон хэл" : "Japanese";
+  if (value === "ENGLISH") return lang === "mn" ? "Англи хэл" : "English";
+  return null;
+}
+
+function selectedSubjects(application: ApplicationRow) {
+  return [
+    application.subjectJapanese ? "Japanese as a Foreign Language" : "",
+    application.subjectScience
+      ? `Science ${[application.scienceOption1, application.scienceOption2].filter(Boolean).join(", ")}`
+      : "",
+    application.subjectJapanAndWorld ? "Japan and the World" : "",
+    application.subjectMathematics ? `Mathematics ${application.mathCourse ?? ""}` : "",
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(", ");
 }
 
 function fullName(application: ApplicationRow) {

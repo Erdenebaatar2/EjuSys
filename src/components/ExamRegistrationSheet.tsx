@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -68,6 +69,9 @@ interface ApplicationResponse {
   scienceOption1?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY" | null;
   scienceOption2?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY" | null;
   examLanguage?: "JAPANESE" | "ENGLISH" | null;
+  jassoScholarshipApply?: boolean;
+  specialExam?: boolean;
+  specialSupportNote?: string | null;
 }
 
 interface RegistrationForm {
@@ -79,6 +83,9 @@ interface RegistrationForm {
   scienceOption1?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY";
   scienceOption2?: "PHYSICS" | "CHEMISTRY" | "BIOLOGY";
   examLanguage: "JAPANESE" | "ENGLISH";
+  jassoScholarshipApply: boolean;
+  specialExam: boolean;
+  specialSupportNote: string;
 }
 
 type PaymentStatus = "NEW" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
@@ -87,6 +94,7 @@ interface PaymentResponse {
   paymentId: string;
   applicationId: string;
   invoiceId: string | null;
+  qpayPaymentId?: string | null;
   senderInvoiceNo: string;
   amount: number;
   status: PaymentStatus;
@@ -94,12 +102,13 @@ interface PaymentResponse {
   qrImage: string | null;
   deeplinks: string;
   paidAt: string | null;
-  demo?: boolean;
 }
 
 type Deeplink = { name: string; description?: string; logo?: string; link: string };
 
 const MAX_PHOTO_SIZE = 2 * 1024 * 1024;
+const PHOTO_ASPECT_RATIO = 4 / 3;
+const PHOTO_ASPECT_TOLERANCE = 0.03;
 
 function emptyForm(): RegistrationForm {
   return {
@@ -111,6 +120,9 @@ function emptyForm(): RegistrationForm {
     scienceOption1: undefined,
     scienceOption2: undefined,
     examLanguage: "JAPANESE",
+    jassoScholarshipApply: false,
+    specialExam: false,
+    specialSupportNote: "",
   };
 }
 
@@ -159,6 +171,9 @@ export function ExamRegistrationSheet({
       scienceOption1: app.scienceOption1 ?? undefined,
       scienceOption2: app.scienceOption2 ?? undefined,
       examLanguage: app.examLanguage ?? "JAPANESE",
+      jassoScholarshipApply: Boolean(app.jassoScholarshipApply),
+      specialExam: Boolean(app.specialExam),
+      specialSupportNote: app.specialSupportNote ?? "",
     });
   }, [appQuery.data, appQuery.isLoading, open]);
 
@@ -183,6 +198,9 @@ export function ExamRegistrationSheet({
         scienceOption1: form.subjectScience ? form.scienceOption1 : null,
         scienceOption2: form.subjectScience ? form.scienceOption2 : null,
         examLanguage: form.examLanguage,
+        jassoScholarshipApply: form.jassoScholarshipApply,
+        specialExam: form.specialExam,
+        specialSupportNote: form.specialExam ? form.specialSupportNote : null,
       }),
     onSuccess: (saved) => {
       toast.success(text.applicationCreated);
@@ -190,13 +208,15 @@ export function ExamRegistrationSheet({
       onClose();
       void navigate({ to: "/student/applications/$id", params: { id: saved.id } });
     },
-    onError: (err) => {
+    onError: async (err) => {
       const message = err instanceof Error ? err.message : text.saveFailed;
       if (isDuplicateApplicationError(message)) {
-        toast.info(text.alreadyRegistered);
-        void appQuery.refetch();
-        invalidateStudentData(qc);
-        return;
+        const latestApplication = await appQuery.refetch();
+        if (latestApplication.data) {
+          toast.info(text.alreadyRegistered);
+          invalidateStudentData(qc);
+          return;
+        }
       }
       toast.error(message);
     },
@@ -218,7 +238,7 @@ export function ExamRegistrationSheet({
     (!form.subjectScience || Boolean(form.scienceOption1)) &&
     !existingApplication;
 
-  function choosePhoto(file: File | undefined) {
+  async function choosePhoto(file: File | undefined) {
     if (!file) return;
     if (!["image/jpeg", "image/png"].includes(file.type)) {
       toast.error(text.photoTypeError);
@@ -226,6 +246,17 @@ export function ExamRegistrationSheet({
     }
     if (file.size > MAX_PHOTO_SIZE) {
       toast.error(text.photoSizeError);
+      return;
+    }
+    try {
+      const dimensions = await readImageDimensions(file);
+      const ratio = dimensions.width / Math.max(1, dimensions.height);
+      if (Math.abs(ratio - PHOTO_ASPECT_RATIO) > PHOTO_ASPECT_TOLERANCE) {
+        toast.error(text.photoAspectError);
+        return;
+      }
+    } catch {
+      toast.error(text.photoReadError);
       return;
     }
     uploadMut.mutate(file);
@@ -397,6 +428,7 @@ export function ExamRegistrationSheet({
                       </div>
                     )}
                   </div>
+                  <p className="mt-3 text-sm leading-5 text-muted-foreground">{text.photoHelper}</p>
                 </Step>
 
                 <Step title={text.stepSubjects}>
@@ -478,6 +510,45 @@ export function ExamRegistrationSheet({
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </Step>
+
+                <Step title={text.stepScholarship}>
+                  <DescribedCheck
+                    label={text.scholarshipLabel}
+                    description={text.scholarshipDescription}
+                    checked={form.jassoScholarshipApply}
+                    disabled={Boolean(existingApplication)}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, jassoScholarshipApply: value }))
+                    }
+                  />
+                </Step>
+
+                <Step title={text.stepSupport}>
+                  <div className="space-y-3">
+                    <DescribedCheck
+                      label={text.specialExamLabel}
+                      description={text.specialExamDescription}
+                      checked={form.specialExam}
+                      disabled={Boolean(existingApplication)}
+                      onChange={(value) =>
+                        setForm((current) => ({ ...current, specialExam: value }))
+                      }
+                    />
+                    {form.specialExam && (
+                      <Textarea
+                        value={form.specialSupportNote}
+                        disabled={Boolean(existingApplication)}
+                        placeholder={text.specialSupportNotePlaceholder}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            specialSupportNote: event.target.value,
+                          }))
+                        }
+                      />
+                    )}
                   </div>
                 </Step>
 
@@ -564,6 +635,7 @@ function QPayDialog({
   const text = copy(lang);
   const qc = useQueryClient();
   const [initialized, setInitialized] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -572,19 +644,6 @@ function QPayDialog({
       qc.setQueryData(["payment", "qpay", applicationId], data);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "QPay error"),
-  });
-
-  const demoCompleteMut = useMutation({
-    mutationFn: () =>
-      apiPost<PaymentResponse>(
-        `/api/student/application/${applicationId}/payment/qpay/demo-complete`,
-      ),
-    onSuccess: (paid) => {
-      qc.setQueryData(["payment", "qpay", applicationId], paid);
-      invalidateStudentData(qc);
-      onPaid();
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : text.paymentFailed),
   });
 
   const data =
@@ -637,10 +696,7 @@ function QPayDialog({
   }, [data?.deeplinks]);
 
   function checkPayment() {
-    if (data?.demo) {
-      demoCompleteMut.mutate();
-      return;
-    }
+    setCheckingPayment(true);
     void qc
       .fetchQuery({
         queryKey: ["payment", "qpay", applicationId],
@@ -649,10 +705,17 @@ function QPayDialog({
       })
       .then((latest) => {
         if (latest.status === "PAID") {
+          toast.success(text.paymentSuccessful);
           invalidateStudentData(qc);
           onPaid();
+        } else if (latest.status === "FAILED" || latest.status === "EXPIRED") {
+          toast.error(text.paymentFailed);
+        } else {
+          toast.info(text.paymentPending);
         }
-      });
+      })
+      .catch(() => toast.error(text.paymentCheckFailed))
+      .finally(() => setCheckingPayment(false));
   }
 
   return (
@@ -706,8 +769,8 @@ function QPayDialog({
                 {data.senderInvoiceNo}
               </p>
             )}
-            <Button className="w-full" onClick={checkPayment} disabled={demoCompleteMut.isPending}>
-              {demoCompleteMut.isPending ? (
+            <Button className="w-full" onClick={checkPayment} disabled={checkingPayment}>
+              {checkingPayment ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -795,6 +858,35 @@ function SubjectCheck({
   );
 }
 
+function DescribedCheck({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-muted/20 p-3 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-70">
+      <Checkbox
+        className="mt-0.5"
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={(value) => onChange(Boolean(value))}
+      />
+      <span className="grid gap-1">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-sm leading-5 text-muted-foreground">{description}</span>
+      </span>
+    </label>
+  );
+}
+
 function ScienceSelect({
   value,
   placeholder,
@@ -861,6 +953,22 @@ function mediaBaseUrl(): string {
   return "";
 }
 
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Invalid image"));
+    };
+    image.src = url;
+  });
+}
+
 function invalidateStudentData(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: ["student", "application"] });
   void qc.invalidateQueries({ queryKey: ["student", "applications"] });
@@ -881,7 +989,9 @@ function copy(lang: "mn" | "en") {
       stepProfile: "2. Personal information",
       stepPhoto: "3. Photo",
       stepSubjects: "4. Subject choices",
-      stepPayment: "5. QPay payment",
+      stepScholarship: "5. Scholarship",
+      stepSupport: "6. Special exam support",
+      stepPayment: "7. QPay payment",
       examName: "Exam",
       examDate: "Exam date",
       examLocation: "Location",
@@ -894,9 +1004,17 @@ function copy(lang: "mn" | "en") {
       documentNumber: "Document number",
       uploadPhoto: "Upload photo",
       uploaded: "Uploaded",
+      photoHelper:
+        "The ID photo must be taken within the last 6 months, have a 4x3 ratio, and show the face clearly.",
       examLanguage: "Exam language",
       japaneseLanguage: "Japanese",
       englishLanguage: "English",
+      scholarshipLabel: "Request scholarship consideration",
+      scholarshipDescription: "Mark this if you want to apply for the JASSO scholarship option.",
+      specialExamLabel: "Request special exam support",
+      specialExamDescription:
+        "For participants with visual, hearing, mobility, or other disabilities.",
+      specialSupportNotePlaceholder: "Describe the support you need, if any.",
       physics: "Physics",
       chemistry: "Chemistry",
       biology: "Biology",
@@ -913,12 +1031,16 @@ function copy(lang: "mn" | "en") {
       profileIncomplete: "Profile information is incomplete. Please contact an admin.",
       photoTypeError: "Only JPG/PNG images are allowed",
       photoSizeError: "Photo must be under 2MB",
+      photoAspectError: "Photo must have a 4x3 aspect ratio.",
+      photoReadError: "Could not read the photo. Please choose another image.",
       photoRequired: "Please upload a photo",
       subjectRequired: "Select at least one subject",
       scienceRequired: "Select a science option",
       paymentSuccessful: "Payment successful",
       creatingInvoice: "Creating QPay invoice...",
       checkPayment: "Check payment",
+      paymentPending: "Payment is pending.",
+      paymentCheckFailed: "Could not check the payment. Please try again.",
       paymentFailed: "Payment failed",
     };
   }
@@ -930,7 +1052,9 @@ function copy(lang: "mn" | "en") {
     stepProfile: "2. Хувийн мэдээлэл",
     stepPhoto: "3. Цээж зураг",
     stepSubjects: "4. Хичээл сонголт",
-    stepPayment: "5. QPay төлбөр",
+    stepScholarship: "5. Тэтгэлэг",
+    stepSupport: "6. Тусгай шалгалт",
+    stepPayment: "7. QPay төлбөр",
     examName: "Шалгалт",
     examDate: "Шалгалтын огноо",
     examLocation: "Байршил",
@@ -943,9 +1067,17 @@ function copy(lang: "mn" | "en") {
     documentNumber: "Бичиг баримтын дугаар",
     uploadPhoto: "Зураг оруулах",
     uploaded: "Оруулсан",
+    photoHelper:
+      "Цээж зураг нь сүүлийн 6 сарын дотор авахуулсан, 4x3 харьцаатай, нүүр тод харагдсан зураг байх ёстой.",
     examLanguage: "Шалгалтын хэл",
     japaneseLanguage: "Япон хэл",
     englishLanguage: "Англи хэл",
+    scholarshipLabel: "JASSO тэтгэлэг хүсэх",
+    scholarshipDescription: "Тэтгэлэгт хамрагдах хүсэлттэй бол тэмдэглэнэ үү.",
+    specialExamLabel: "Тусгай шалгалт өгөх",
+    specialExamDescription:
+      "Хараа, сонсгол, хөдөлгөөний болон бусад хөгжлийн бэрхшээлтэй оролцогчдод зориулав",
+    specialSupportNotePlaceholder: "Шаардлагатай дэмжлэгээ товч бичнэ үү.",
     physics: "Физик",
     chemistry: "Хими",
     biology: "Биологи",
@@ -962,12 +1094,16 @@ function copy(lang: "mn" | "en") {
     profileIncomplete: "Профайлын мэдээлэл дутуу байна. Админтай холбогдоно уу.",
     photoTypeError: "Зөвхөн JPG/PNG зураг оруулна уу",
     photoSizeError: "Зургийн хэмжээ 2MB-аас бага байх ёстой",
+    photoAspectError: "Цээж зураг 4x3 харьцаатай байх ёстой.",
+    photoReadError: "Цээж зургийг уншиж чадсангүй. Өөр зураг сонгоно уу.",
     photoRequired: "Цээж зураг заавал оруулна уу",
     subjectRequired: "Хамгийн багадаа нэг хичээл сонгоно уу",
     scienceRequired: "Science сонголтоо оруулна уу",
     paymentSuccessful: "Төлбөр амжилттай",
     creatingInvoice: "QPay invoice үүсгэж байна...",
     checkPayment: "Төлбөр шалгах",
+    paymentPending: "Төлбөр хүлээгдэж байна.",
+    paymentCheckFailed: "Төлбөр шалгахад алдаа гарлаа. Дахин оролдоно уу.",
     paymentFailed: "Төлбөр амжилтгүй",
   };
 }

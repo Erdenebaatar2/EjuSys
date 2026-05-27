@@ -17,11 +17,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -64,15 +62,10 @@ public class AdminApplicationController {
         Instant from = fromDate == null ? null : fromDate.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant to = toDate == null ? null : toDate.plusDays(1).atStartOfDay().minusNanos(1).toInstant(ZoneOffset.UTC);
         String searchTerm = search == null ? "" : search.trim().toLowerCase();
-        Set<UUID> activeExamIds = new HashSet<>(
-                examRepo.findByActiveTrueOrderByExamDateAsc().stream().map(Exam::getId).toList()
-        );
-
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(size, 100));
         List<Application> filtered = appRepo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
-                .filter(a -> activeExamIds.contains(a.getExamId()))
                 .filter(a -> st == null || a.getStatus() == st)
                 .filter(a -> ps == null || a.getPaymentStatus() == ps)
                 .filter(a -> examId == null || examId.equals(a.getExamId()))
@@ -164,6 +157,8 @@ public class AdminApplicationController {
         m.put("scienceOption2", a.getScienceOption2() == null ? null : a.getScienceOption2().name());
         m.put("mathCourse", a.getMathCourse() == null ? null : a.getMathCourse().name());
         m.put("examLanguage", a.getExamLanguage() == null ? null : a.getExamLanguage().name());
+        m.put("specialExam", a.isSpecialExam());
+        m.put("specialSupportNote", a.getSpecialSupportNote());
         m.put("jassoScholarshipApply", a.isJassoScholarshipApply());
         m.put("examSite", a.getExamSite() == null ? null : a.getExamSite().name());
         m.put("createdAt", a.getCreatedAt());
@@ -186,6 +181,7 @@ public class AdminApplicationController {
             em.put("name", e.getName());
             em.put("year", e.getYear());
             em.put("session", e.getSession().name().toLowerCase());
+            em.put("examRound", e.getExamRound());
             em.put("examDate", e.getExamDate());
             em.put("location", e.getLocation());
             em.put("examHost", e.getExamHost() == null ? null : e.getExamHost().name());

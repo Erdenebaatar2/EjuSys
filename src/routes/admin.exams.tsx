@@ -50,7 +50,7 @@ export const Route = createFileRoute("/admin/exams")({
   component: AdminExamPage,
 });
 
-type Session = "FIRST" | "SECOND";
+type Session = "FIRST" | "SECOND" | "THIRD";
 type ExamHost = "ULAANBAATAR" | "DARKHAN" | "ERDENET";
 
 interface ExamRecord {
@@ -58,6 +58,7 @@ interface ExamRecord {
   name: string;
   year: number;
   session: Session;
+  examRound?: number | null;
   examHost?: ExamHost | null;
   hostCity?: string | null;
   examDate: string;
@@ -76,6 +77,7 @@ interface ExamRecord {
 interface ExamForm {
   year: string;
   session: Session;
+  examRound: string;
   examHost: ExamHost;
   examDate: string;
   examFee: string;
@@ -101,14 +103,12 @@ function AdminExamPage() {
     queryKey: ["admin", "exams"],
     queryFn: () => apiGet<ExamRecord[]>("/api/admin/exam/all"),
   });
-  const exams = useMemo(
-    () => (examData ?? EMPTY_EXAMS).filter((exam) => exam.active !== false),
-    [examData],
-  );
+  const exams = useMemo(() => examData ?? EMPTY_EXAMS, [examData]);
 
   const selectedExam = exams.find((exam) => exam.id === selectedExamId) ?? null;
-  const openExamCount = exams.filter((exam) =>
-    isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
+  const openExamCount = exams.filter(
+    (exam) =>
+      exam.active !== false && isRegistrationOpen(exam.registrationStart, exam.registrationEnd),
   ).length;
   const closedExamCount = exams.length - openExamCount;
 
@@ -157,7 +157,7 @@ function AdminExamPage() {
       await qc.cancelQueries({ queryKey: ["admin", "exams"] });
       const previousExams = qc.getQueryData<ExamRecord[]>(["admin", "exams"]);
       qc.setQueryData<ExamRecord[]>(["admin", "exams"], (old) =>
-        (old ?? []).filter((exam) => exam.id !== id),
+        (old ?? []).map((exam) => (exam.id === id ? { ...exam, active: false } : exam)),
       );
       if (selectedExamId === id) {
         setSelectedExamId(null);
@@ -217,8 +217,8 @@ function AdminExamPage() {
         title={lang === "mn" ? "Шалгалт удирдах" : "Exam management"}
         description={
           lang === "mn"
-            ? "Идэвхтэй шалгалтын бүртгэл, хугацаа болон шалгалтын нэмэлт зааврыг удирдана."
-            : "Manage active exam records, registration windows, and exam instructions."
+            ? "Шалгалтын бүртгэл, хугацаа болон шалгалтын нэмэлт зааврыг удирдана."
+            : "Manage exam records, registration windows, and exam instructions."
         }
         actions={
           <Button type="button" onClick={startCreate}>
@@ -231,9 +231,9 @@ function AdminExamPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <AdminMetricCard
           icon={BookOpen}
-          label={lang === "mn" ? "Идэвхтэй шалгалт" : "Active exams"}
+          label={lang === "mn" ? "Нийт шалгалт" : "All exams"}
           value={exams.length}
-          helper={lang === "mn" ? "Нээлттэй бүртгэлүүд" : "Open records"}
+          helper={lang === "mn" ? "Идэвхтэй болон хаалттай" : "Active and closed records"}
           tone="blue"
         />
         <AdminMetricCard
@@ -264,17 +264,14 @@ function AdminExamPage() {
               <Clock3 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : exams.length === 0 ? (
-            <AdminEmptyState>
-              {lang === "mn" ? "Идэвхтэй шалгалт алга." : "No active exams."}
-            </AdminEmptyState>
+            <AdminEmptyState>{lang === "mn" ? "Шалгалт алга." : "No exams."}</AdminEmptyState>
           ) : (
             <div className="space-y-2">
               {exams.map((exam) => {
                 const selected = exam.id === selectedExamId && !isCreating;
-                const registrationOpen = isRegistrationOpen(
-                  exam.registrationStart,
-                  exam.registrationEnd,
-                );
+                const registrationOpen =
+                  exam.active !== false &&
+                  isRegistrationOpen(exam.registrationStart, exam.registrationEnd);
 
                 return (
                   <div
@@ -297,7 +294,7 @@ function AdminExamPage() {
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span>{exam.year}</span>
-                            <span>{sessionLabel(exam.session, lang)}</span>
+                            <span>{roundLabel(exam.examRound, exam.session, lang)}</span>
                             <span>{exam.examDate}</span>
                             <span>{formatCurrency(exam.examFee)}</span>
                           </div>
@@ -313,11 +310,11 @@ function AdminExamPage() {
                         >
                           {registrationOpen
                             ? lang === "mn"
-                              ? "Нээлттэй"
-                              : "Open"
+                              ? "OPEN / ACTIVE"
+                              : "OPEN / ACTIVE"
                             : lang === "mn"
-                              ? "Хаалттай"
-                              : "Closed"}
+                              ? "CLOSED / INACTIVE"
+                              : "CLOSED / INACTIVE"}
                         </Badge>
                       </div>
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -393,7 +390,13 @@ function AdminExamPage() {
                 <Field label="Session">
                   <Select
                     value={form.session}
-                    onValueChange={(value) => setForm({ ...form, session: value as Session })}
+                    onValueChange={(value) =>
+                      setForm({
+                        ...form,
+                        session: value as Session,
+                        examRound: String(sessionToRound(value as Session)),
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -401,8 +404,25 @@ function AdminExamPage() {
                     <SelectContent>
                       <SelectItem value="FIRST">{sessionLabel("FIRST", lang)}</SelectItem>
                       <SelectItem value="SECOND">{sessionLabel("SECOND", lang)}</SelectItem>
+                      <SelectItem value="THIRD">{sessionLabel("THIRD", lang)}</SelectItem>
                     </SelectContent>
                   </Select>
+                </Field>
+                <Field label={lang === "mn" ? "Шалгалтын дугаар" : "Exam round"}>
+                  <Input
+                    type="number"
+                    required
+                    min="1"
+                    value={form.examRound}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setForm({
+                        ...form,
+                        examRound: value,
+                        session: roundToSessionValue(Number(value)),
+                      });
+                    }}
+                  />
                 </Field>
                 <Field label={lang === "mn" ? "Шалгалт зохион байгуулагдах хот" : "Exam host city"}>
                   <Select
@@ -554,6 +574,7 @@ function emptyForm(): ExamForm {
   return {
     year: String(new Date().getFullYear()),
     session: "FIRST",
+    examRound: "1",
     examHost: "ULAANBAATAR",
     examDate: "",
     examFee: "70000",
@@ -570,6 +591,7 @@ function formFromExam(exam: ExamRecord): ExamForm {
   return {
     year: String(exam.year),
     session: exam.session,
+    examRound: String(exam.examRound ?? sessionToRound(exam.session)),
     examHost: exam.examHost ?? inferExamHost(exam.location),
     examDate: exam.examDate,
     examFee: String(exam.examFee ?? 70000),
@@ -587,6 +609,7 @@ function formToPayload(form: ExamForm) {
   return {
     year: Number(form.year),
     session: form.session,
+    examRound: Number(form.examRound),
     examHost: form.examHost,
     hostCity: hostCityLabel(form.examHost),
     examDate: form.examDate,
@@ -615,6 +638,13 @@ function validateExamForm(form: ExamForm, lang: "mn" | "en"): string | null {
   const year = Number(form.year);
   if (!Number.isInteger(year) || year < 2000) {
     return lang === "mn" ? "Оныг зөв оруулна уу." : "Enter a valid year.";
+  }
+
+  const examRound = Number(form.examRound);
+  if (!Number.isInteger(examRound) || examRound < 1) {
+    return lang === "mn"
+      ? "Шалгалтын дугаарыг эерэг бүхэл тоогоор оруулна уу."
+      : "Enter a positive whole number for the exam round.";
   }
 
   if (form.registrationEnd < form.registrationStart) {
@@ -670,8 +700,35 @@ function formatCurrency(value?: number | null): string {
 }
 
 function sessionLabel(session: Session, lang: "mn" | "en"): string {
-  if (lang !== "mn") return session === "FIRST" ? "First" : "Second";
-  return session === "FIRST" ? "Эхний" : "Хоёр дахь";
+  if (lang !== "mn") {
+    if (session === "SECOND") return "Second";
+    if (session === "THIRD") return "Third";
+    return "First";
+  }
+  if (session === "SECOND") return "Хоёр дахь";
+  if (session === "THIRD") return "Гурав дахь";
+  return "Эхний";
+}
+
+function roundLabel(
+  examRound: number | null | undefined,
+  session: Session,
+  lang: "mn" | "en",
+): string {
+  const round = examRound ?? sessionToRound(session);
+  return lang === "mn" ? `${round}-р шалгалт` : `Round ${round}`;
+}
+
+function sessionToRound(session: Session): number {
+  if (session === "SECOND") return 2;
+  if (session === "THIRD") return 3;
+  return 1;
+}
+
+function roundToSessionValue(round: number): Session {
+  if (round === 2) return "SECOND";
+  if (round === 3) return "THIRD";
+  return "FIRST";
 }
 
 async function invalidateExamData(qc: ReturnType<typeof useQueryClient>) {

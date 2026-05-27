@@ -61,6 +61,8 @@ public class StudentApplicationController {
             String scienceOption2,
             String mathCourse,
             String examLanguage,
+            Boolean specialExam,
+            String specialSupportNote,
             Boolean jassoScholarshipApply,
             String examSite
     ) {}
@@ -85,6 +87,14 @@ public class StudentApplicationController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @GetMapping("/all")
+    public java.util.List<Map<String, Object>> getMyApplications(Authentication auth) {
+        UUID userId = (UUID) auth.getPrincipal();
+        return appRepo.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getApplicationDetail(@PathVariable UUID id, Authentication auth) {
         UUID userId = (UUID) auth.getPrincipal();
@@ -101,10 +111,7 @@ public class StudentApplicationController {
         UUID userId = (UUID) auth.getPrincipal();
         Optional<Exam> activeExam = activeExam(payload.examId());
         if (activeExam.isEmpty()) {
-            String message = examRepo.findFirstByActiveTrueOrderByExamDateAsc().isPresent()
-                    ? "Active exam registration is not open"
-                    : "No active exam is available";
-            return ResponseEntity.badRequest().body(Map.of("message", message));
+            return ResponseEntity.badRequest().body(Map.of("message", "Энэ шалгалтын бүртгэл хаагдсан байна."));
         }
         if (appRepo.findByUserIdAndExamId(userId, activeExam.get().getId()).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Application already exists"));
@@ -122,14 +129,18 @@ public class StudentApplicationController {
         Application app = new Application();
         app.setUserId(userId);
         app.setExamId(activeExam.get().getId());
-        app.setStatus(Application.Status.PENDING_PAYMENT);
+        app.setStatus(Application.Status.PENDING);
         applyPayload(app, payload, profile);
         app.setApplicationNumber(applicationNumberService.nextNumber(activeExam.get(), app));
         try {
             app = appRepo.save(app);
         } catch (DataIntegrityViolationException e) {
+            if (appRepo.findByUserIdAndExamId(userId, activeExam.get().getId()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("message", "Application already exists"));
+            }
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "Application already exists"));
+                    .body(Map.of("message", "Application could not be saved. Please try again."));
         }
         return ResponseEntity.ok(toDto(app));
     }
@@ -203,6 +214,10 @@ public class StudentApplicationController {
         return value == null || value.isBlank();
     }
 
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     private void applyPayload(Application app, ApplicationPayload payload, Profile profile) {
         app.setPhotoUrl(payload.photoUrl());
         app.setNameAlphabet((profile.getLastName() + " " + profile.getFirstName()).trim());
@@ -210,7 +225,7 @@ public class StudentApplicationController {
         app.setSex(null);
         app.setDateOfBirth(null);
         app.setNationality(null);
-        app.setCountryCode(null);
+        app.setCountryCode("MNG");
         app.setAddress(profile.getAddress());
         app.setPostalCode(null);
         app.setAddressCode(null);
@@ -227,6 +242,8 @@ public class StudentApplicationController {
         app.setScienceOption2(parseScience(payload.scienceOption2()));
         app.setMathCourse(null);
         app.setExamLanguage(parseExamLanguage(payload.examLanguage()));
+        app.setSpecialExam(payload.specialExam());
+        app.setSpecialSupportNote(Boolean.TRUE.equals(payload.specialExam()) ? blankToNull(payload.specialSupportNote()) : null);
         app.setJassoScholarshipApply(payload.jassoScholarshipApply() != null && payload.jassoScholarshipApply());
         app.setExamSite(parseExamSite(payload.examSite()));
         app.setPhotoPath(payload.photoUrl());
@@ -288,6 +305,8 @@ public class StudentApplicationController {
         map.put("scienceOption2", app.getScienceOption2() != null ? app.getScienceOption2().name() : null);
         map.put("mathCourse", app.getMathCourse() != null ? app.getMathCourse().name() : null);
         map.put("examLanguage", app.getExamLanguage() != null ? app.getExamLanguage().name() : null);
+        map.put("specialExam", app.isSpecialExam());
+        map.put("specialSupportNote", app.getSpecialSupportNote());
         map.put("jassoScholarshipApply", app.isJassoScholarshipApply());
         map.put("examSite", app.getExamSite() != null ? app.getExamSite().name() : null);
         map.put("rejectionReason", app.getRejectionReason());
@@ -392,6 +411,7 @@ public class StudentApplicationController {
         map.put("name", exam.getName());
         map.put("year", exam.getYear());
         map.put("session", exam.getSession().name().toLowerCase());
+        map.put("examRound", exam.getExamRound());
         map.put("examDate", exam.getExamDate());
         map.put("location", exam.getLocation());
         map.put("examHost", exam.getExamHost() == null ? null : exam.getExamHost().name());

@@ -24,7 +24,8 @@ public class AdminExamController {
     public record ExamRequest(
             String name,
             Integer year,
-            String session,        // "FIRST" | "SECOND"
+            String session,
+            Integer examRound,
             String examHost,
             String hostCity,
             LocalDate examDate,
@@ -50,7 +51,7 @@ public class AdminExamController {
 
     @GetMapping("/all")
     public List<Exam> getAll() {
-        return examRepo.findByActiveTrueOrderByExamDateAsc();
+        return examRepo.findAllByOrderByExamDateAsc();
     }
 
     @PostMapping
@@ -66,6 +67,10 @@ public class AdminExamController {
 
     @PatchMapping
     public ResponseEntity<?> update(@RequestBody ExamRequest req) {
+        String validationError = validateUpdate(req);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", validationError));
+        }
         return examRepo.findFirstByActiveTrueOrderByExamDateAsc().<ResponseEntity<?>>map(e -> {
             applyRequest(e, req, false);
             return ResponseEntity.ok(examRepo.save(e));
@@ -74,6 +79,10 @@ public class AdminExamController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<?> updateById(@PathVariable UUID id, @RequestBody ExamRequest req) {
+        String validationError = validateUpdate(req);
+        if (validationError != null) {
+            return ResponseEntity.badRequest().body(Map.of("message", validationError));
+        }
         return examRepo.findById(id).<ResponseEntity<?>>map(e -> {
             applyRequest(e, req, false);
             return ResponseEntity.ok(examRepo.save(e));
@@ -105,12 +114,14 @@ public class AdminExamController {
         int examFee = req.examFee() == null
                 ? (e.getExamFee() == null ? 70000 : e.getExamFee())
                 : Math.max(1, req.examFee());
-        Exam.Session session = Exam.Session.valueOf(req.session().toUpperCase());
+        int examRound = resolveExamRound(req);
+        Exam.Session session = Exam.roundToSession(examRound);
         Exam.ExamHost host = parseExamHost(firstNonBlank(req.examHost(), req.hostCity(), req.location()), e.getExamHost());
         e.setYear(req.year());
         e.setSession(session);
+        e.setExamRound(examRound);
         e.setExamHost(host);
-        e.setName(defaultExamName(req.year(), session, host));
+        e.setName(defaultExamName(req.year(), examRound, host));
         e.setExamDate(req.examDate());
         e.setLocation(host.getDisplayName());
         e.setTotalSeats(totalSeats);
@@ -135,11 +146,21 @@ public class AdminExamController {
                 || req.registrationStart() == null || req.registrationEnd() == null) {
             return "Year, session, exam date, and registration dates are required";
         }
+        int examRound = resolveExamRound(req);
+        if (examRound < 1) {
+            return "Exam round must be a positive number";
+        }
         try {
-            Exam.Session.valueOf(req.session().toUpperCase());
+            if (req.examRound() == null) {
+                Exam.Session.valueOf(req.session().toUpperCase());
+            }
             parseExamHost(firstNonBlank(req.examHost(), req.hostCity(), req.location()), null);
         } catch (IllegalArgumentException e) {
             return "Invalid exam session or host city";
+        }
+
+        if (req.registrationEnd().isBefore(req.registrationStart())) {
+            return "Registration end date cannot be before the start date";
         }
 
         LocalDate today = LocalDate.now();
@@ -153,13 +174,8 @@ public class AdminExamController {
                     + previous.getName() + " registration ends on " + previous.getRegistrationEnd();
         }
 
-        Exam.Session session = Exam.Session.valueOf(req.session().toUpperCase());
-        if (examRepo.existsByActiveTrueAndYearAndSession(req.year(), session)) {
-            return "An active exam already exists for this year and session";
-        }
-
-        if (examRepo.countByActiveTrueAndYear(req.year()) >= 2) {
-            return "Only two active exams can be created per year";
+        if (examRepo.existsByActiveTrueAndYearAndExamRound(req.year(), examRound)) {
+            return "An active exam already exists for this year and round";
         }
 
         if (req.examFee() == null || req.examFee() <= 0) {
@@ -167,6 +183,35 @@ public class AdminExamController {
         }
 
         return null;
+    }
+
+    private String validateUpdate(ExamRequest req) {
+        try {
+            int examRound = resolveExamRound(req);
+            if (examRound < 1) {
+                return "Exam round must be a positive number";
+            }
+            parseExamHost(firstNonBlank(req.examHost(), req.hostCity(), req.location()), null);
+        } catch (IllegalArgumentException e) {
+            return "Invalid exam session or host city";
+        }
+
+        if (req.registrationStart() != null && req.registrationEnd() != null
+                && req.registrationEnd().isBefore(req.registrationStart())) {
+            return "Registration end date cannot be before the start date";
+        }
+
+        if (req.examFee() != null && req.examFee() <= 0) {
+            return "Exam fee must be greater than zero";
+        }
+
+        return null;
+    }
+
+    private int resolveExamRound(ExamRequest req) {
+        if (req.examRound() != null) return req.examRound();
+        if (req.session() == null || req.session().isBlank()) return 1;
+        return Exam.sessionToRound(Exam.Session.valueOf(req.session().toUpperCase()));
     }
 
     private Exam.ExamHost parseExamHost(String raw, Exam.ExamHost fallback) {
@@ -188,9 +233,8 @@ public class AdminExamController {
         return Exam.ExamHost.valueOf(normalized);
     }
 
-    private String defaultExamName(Integer year, Exam.Session session, Exam.ExamHost host) {
-        String sessionLabel = session == Exam.Session.FIRST ? "1-р шалгалт" : "2-р шалгалт";
-        return "EJU " + year + " " + sessionLabel + " - " + host.getDisplayName();
+    private String defaultExamName(Integer year, Integer examRound, Exam.ExamHost host) {
+        return "EJU " + year + " " + examRound + "-р шалгалт - " + host.getDisplayName();
     }
 
     private String firstNonBlank(String... values) {

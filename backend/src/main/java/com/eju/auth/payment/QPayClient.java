@@ -62,6 +62,10 @@ public class QPayClient {
 
     public JsonNode createInvoice(String senderInvoiceNo, String receiverCode,
                                   String description, int amount, String callbackUrl) {
+        if (props.getInvoiceCode() == null || props.getInvoiceCode().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "QPay invoice code is not configured");
+        }
         Map<String, Object> body = Map.of(
                 "invoice_code", props.getInvoiceCode(),
                 "sender_invoice_no", senderInvoiceNo,

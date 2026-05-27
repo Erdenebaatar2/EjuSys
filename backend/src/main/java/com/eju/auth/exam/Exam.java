@@ -11,7 +11,7 @@ import java.util.UUID;
 @Table(name = "exams")
 public class Exam {
 
-    public enum Session { FIRST, SECOND }
+    public enum Session { FIRST, SECOND, THIRD }
 
     public enum ExamHost {
         ULAANBAATAR("Улаанбаатар"),
@@ -43,6 +43,9 @@ public class Exam {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Session session;
+
+    @Column(name = "exam_round")
+    private Integer examRound = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "exam_host")
@@ -100,13 +103,24 @@ public class Exam {
         if (totalSeats == null) totalSeats = 0;
         if (availableSeats == null) availableSeats = totalSeats;
         if (examFee == null) examFee = 70000;
+        normalizeRound();
         normalizeHostFields();
     }
 
     @PreUpdate
     void onUpdate() {
         updatedAt = Instant.now();
+        normalizeRound();
         normalizeHostFields();
+    }
+
+    private void normalizeRound() {
+        if (examRound == null || examRound < 1) {
+            examRound = sessionToRound(session);
+        }
+        if (session == null) {
+            session = roundToSession(examRound);
+        }
     }
 
     private void normalizeHostFields() {
@@ -115,12 +129,24 @@ public class Exam {
             location = examHost.getDisplayName();
         }
         if ((name == null || name.isBlank()) && year != null && session != null) {
-            name = "EJU " + year + " " + sessionLabel(session) + " - " + examHost.getDisplayName();
+            name = "EJU " + year + " " + roundLabel(getExamRound()) + " - " + examHost.getDisplayName();
         }
     }
 
-    private String sessionLabel(Session session) {
-        return session == Session.FIRST ? "1-р шалгалт" : "2-р шалгалт";
+    private String roundLabel(int round) {
+        return round + "-р шалгалт";
+    }
+
+    public static int sessionToRound(Session session) {
+        if (session == Session.SECOND) return 2;
+        if (session == Session.THIRD) return 3;
+        return 1;
+    }
+
+    public static Session roundToSession(Integer round) {
+        if (round != null && round == 2) return Session.SECOND;
+        if (round != null && round == 3) return Session.THIRD;
+        return Session.FIRST;
     }
 
     public UUID getId() { return id; }
@@ -131,6 +157,8 @@ public class Exam {
     public void setYear(Integer year) { this.year = year; }
     public Session getSession() { return session; }
     public void setSession(Session session) { this.session = session; }
+    public Integer getExamRound() { return examRound == null ? sessionToRound(session) : examRound; }
+    public void setExamRound(Integer examRound) { this.examRound = examRound; }
     public ExamHost getExamHost() { return examHost; }
     public void setExamHost(ExamHost examHost) { this.examHost = examHost; }
     public LocalDate getExamDate() { return examDate; }
